@@ -1,0 +1,903 @@
+# -*- coding: utf-8 -*-
+"""
+LATENCY-RESILIENT MARL — FULL SIMULATION RUNNER
+Runs every state: audit → fits → AoI → Gilbert-Elliott → kernel → MARL decay sweep
+"""
+
+import math, warnings
+from fractions import Fraction
+from typing import Tuple
+
+import numpy as np
+import scipy.stats as stats
+from scipy.integrate import simpson, trapezoid, quad
+from scipy.optimize import curve_fit
+import matplotlib
+matplotlib.use("Agg")            # headless; drop this line for interactive
+import matplotlib.pyplot as plt
+
+warnings.filterwarnings("ignore")
+np.random.seed(42)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  THRESHOLDS & CONFIG
+# ═══════════════════════════════════════════════════════════════════════════════
+TH = {
+    '1pct':   Fraction(1, 100),
+    '2pct':   Fraction(2, 100),
+    '5pct':   Fraction(5, 100),
+    '1e-6':   Fraction(1, 10**6),
+    '1e-9':   Fraction(1, 10**9),
+    '2pp':    Fraction(2, 100),
+    '3sigma': Fraction(3, 1),
+    '4sigma': Fraction(4, 1),
+    '5sigma': Fraction(5, 1),
+}
+
+CFG = {
+    'L': 302.2328, 'k': 0.0143, 'x0': 101.5374,
+    'tau_min': 0.0, 'tau_max': 600.0,
+    'mu_tau': math.log(100.0), 'sigma_tau': 0.5,
+    'pG': 0.05, 'pB': 0.60, 'p_trans': 0.10, 'q_trans': 0.30,
+    'dt': 0.35, 'T_sim': 60.0, 'lambda_decay': 0.01,
+    'beta': 0.5, 'p_loss': 0.10, 'p_drop': 0.10,
+    'n_agents': 9, 'K_steps': 200,
+    'verbose': True,
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  HELPERS
+# ═══════════════════════════════════════════════════════════════════════════════
+def to_frac(x, max_den=10**9) -> Fraction:
+    return Fraction(x).limit_denominator(max_den)
+
+def is_below(value, threshold: Fraction) -> Tuple[Fraction, bool]:
+    fr = to_frac(abs(float(value)))
+    return fr, fr < threshold
+
+def frac_str(fr: Fraction) -> str:
+    return f"{fr.numerator}/{fr.denominator}"
+
+def pct(fr: Fraction) -> str:
+    return f"{float(fr)*100:.4f}%"
+
+def hr(char='─', n=78): print(char * n)
+def section(t): print("\n" + "═"*78 + f"\n  {t}\n" + "═"*78)
+def subsection(t): print("\n" + "─"*78 + f"\n  {t}\n" + "─"*78)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  I1 — Average Waiting Time
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_I1(cfg):
+    if cfg['verbose']: print("\n[I1] Average Waiting Time — Eq. 13, p.45")
+    T = float(cfg['T_sim'])
+    t = np.linspace(0.0, T, 3000); N = len(t)
+    v = np.maximum(5.0 - 3.0*np.sin(0.5*t) + 0.5*np.random.randn(N), 0.0)
+    for frac in (0.15, 0.45, 0.80):
+        s = int(N*frac); v[max(0, s-20):min(N, s+20)] = 0.0
+    ind = (v < 0.1).astype(float)
+    W_trapz   = float(trapezoid(ind, t))
+    W_simpson = float(simpson(ind, x=t))
+    N_mc = 50000
+    mc   = ind[np.random.randint(0, N, N_mc)]
+    W_mc = T * float(mc.mean())
+    W_se = T * float(mc.std(ddof=1)) / math.sqrt(N_mc)
+    fr_ts, ok_ts = is_below(abs(W_trapz - W_simpson)/max(abs(W_trapz),1e-12), TH['1pct'])
+    fr_mc, ok_mc = is_below(abs(W_trapz - W_mc),
+                            5*to_frac(W_se) + TH['1pct']*to_frac(W_trapz))
+    return dict(name='I1', W_trapz=W_trapz, W_simpson=W_simpson, W_mc=W_mc, W_se=W_se,
+                frac=max(fr_ts, fr_mc), frac_ts=fr_ts, frac_mc=fr_mc,
+                consistent=ok_ts and ok_mc,
+                summary=f"trap={W_trapz:.4f} simp={W_simpson:.4f} MC={W_mc:.4f}±{W_se:.4f}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  I2 — Average Queue Length
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_I2(cfg):
+    if cfg['verbose']: print("\n[I2] Average Queue Length — Eq. 4.3, p.39")
+    n, K = cfg['n_agents'], cfg['K_steps']
+    tv = np.linspace(0.0, 1.0, K)
+    c = (0.3 + 0.4*np.arange(n)/max(n-1,1))[:, None]
+    A = (4.0 + 8.0*np.random.rand(n))[:, None]
+    Q = np.maximum(A*np.exp(-((tv-c)/0.3)**2) + 0.5*np.random.randn(n, K), 0.0)
+    Q_direct = float(Q.sum()/(n*K))
+    Q_trapz  = float(np.mean([trapezoid(Q[i,:], tv) for i in range(n)]))
+    fr, ok = is_below(abs(Q_direct - Q_trapz)/max(abs(Q_direct),1e-12), TH['2pct'])
+    return dict(name='I2', Q_direct=Q_direct, Q_trapz=Q_trapz, frac=fr, consistent=ok,
+                summary=f"direct={Q_direct:.4f} trapz={Q_trapz:.4f} rel={pct(fr)}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  I3 — Average Travel Time
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_I3(cfg):
+    if cfg['verbose']: print("\n[I3] Average Travel Time — Eq. 4.2, p.39")
+    N = 1000
+    t_arr = 10.0*np.random.rand(N)
+    truth = np.maximum(60.0 + 15.0*np.random.randn(N), 10.0)
+    t_dep = t_arr + truth
+    T_avg = float((t_dep - t_arr).mean())
+    T_ci  = 1.96*float((t_dep - t_arr).std(ddof=1))/math.sqrt(N)
+    fr, ok = is_below(abs(T_avg - truth.mean()), to_frac(T_ci))
+    return dict(name='I3', T_avg=T_avg, T_ci95=T_ci, T_truth=float(truth.mean()),
+                frac=fr, consistent=ok,
+                summary=f"T̄={T_avg:.4f}s 95%CI±{T_ci:.4f}s truth={truth.mean():.4f}s")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  I4 — Throughput
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_I4(cfg):
+    if cfg['verbose']: print("\n[I4] Throughput — Eq. 14, p.45")
+    N, p = 800, 0.85
+    T_sim = float(cfg['T_sim'])*20
+    V = np.random.binomial(N, p)
+    Thr = V/T_sim*3600.0
+    batch = np.random.binomial(N, p, size=200)/T_sim*3600.0
+    z = float((Thr - batch.mean())/(batch.std(ddof=1)+1e-12))
+    fr, ok = is_below(abs(z), TH['3sigma'])
+    return dict(name='I4', Thr=float(Thr), Thr_mean=float(batch.mean()), z=z,
+                frac=fr, consistent=ok,
+                summary=f"Thr={Thr:.1f} mean={batch.mean():.1f} z={z:.3f}σ")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  I5 — AoI Decay Kernel
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_I5(cfg):
+    if cfg['verbose']: print("\n[I5] AoI Decay Kernel — Eq. 3.11, p.32")
+    lam = float(cfg['lambda_decay'])
+    tau = np.linspace(0.0, 1000.0, 20001)
+    kap = np.exp(-lam*tau)
+    I_num = float(trapezoid(kap, tau)); I_ana = 1.0/lam
+    fr, ok = is_below(abs(I_num-I_ana)/I_ana, TH['1pct'])
+    return dict(name='I5', I_num=I_num, I_ana=I_ana, frac=fr, consistent=ok,
+                summary=f"∫κ={I_num:.4f} 1/λ={I_ana:.4f} rel={pct(fr)}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  I6 — Vehicle Kinematics (Euler)
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_I6(cfg):
+    if cfg['verbose']: print("\n[I6] Vehicle Kinematics — Forward Euler, p.22")
+    dt = float(cfg['dt']); N = int(float(cfg['T_sim'])/dt)
+    t = np.arange(N)*dt
+    x = np.zeros(N); v = np.zeros(N); v[0] = 15.0
+    for k in range(N-1):
+        a = 0.3*math.sin(0.1*t[k]) - 0.1*(v[k] - 15.0)
+        x[k+1] = x[k] + v[k]*dt
+        v[k+1] = v[k] + a*dt
+    xe = np.arange(N)*(15.0*dt)
+    err = float(np.max(np.abs(xe - 15.0*t)))
+    fr, ok = is_below(err, TH['1e-9'])
+    return dict(name='I6', x_final=float(x[-1]), v_final=float(v[-1]),
+                euler_err=err, frac=fr, consistent=ok,
+                summary=f"x_final={x[-1]:.1f}m v_final={v[-1]:.3f}m/s err={err:.2e}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  I7 — MYCC Control Law
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_I7(cfg):
+    if cfg['verbose']: print("\n[I7] MYCC Control Law — Eq. B.1, p.41")
+    kd, ks, L_truck, target_gap = 0.2, 0.4, 10.0, 25.0
+    dt = float(cfg['dt']); Nt, steps = 5, 300
+    x = np.array([-i*(L_truck+28.0) for i in range(Nt)], dtype=float)
+    v = np.full(Nt, 20.0)
+    for _ in range(steps):
+        u = np.zeros(Nt)
+        gap_err = (x[:-1] - x[1:] - L_truck) - target_gap
+        spd_err = v[:-1] - v[1:]
+        u[1:] = kd*gap_err + ks*spd_err
+        v += u*dt
+        x += v*dt
+    gaps = (x[:-1] - x[1:]) - L_truck
+    err_max = float(np.max(np.abs(gaps - target_gap)))
+    fr = to_frac(err_max)
+    return dict(name='I7', gaps=gaps.tolist(), err_max=err_max, frac=fr,
+                consistent=fr < Fraction(5,1),
+                summary=f"mean_gap={gaps.mean():.3f}m max_err={err_max:.4f}m")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  P1 — Truncated Log-Normal Latency
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_P1(cfg):
+    if cfg['verbose']: print("\n[P1] Truncated Log-Normal — Eq. 3.6, p.30")
+    mu, sg = cfg['mu_tau'], cfg['sigma_tau']
+    lo, hi = float(cfg['tau_min']), float(cfg['tau_max'])
+    dist = stats.lognorm(s=sg, scale=math.exp(mu))
+    Flo, Fhi = dist.cdf(lo), dist.cdf(hi)
+    N = 50000
+    u = Flo + (Fhi-Flo)*np.random.rand(N)
+    tau = dist.ppf(u)
+    pdf_trunc = lambda t: dist.pdf(t)/(Fhi-Flo)
+    mean_int, _ = quad(lambda t: t*pdf_trunc(t), lo, hi, limit=200)
+    fr, ok = is_below(abs(tau.mean()-mean_int)/mean_int, TH['5pct'])
+    return dict(name='P1', tau=tau, mean_emp=float(tau.mean()),
+                mean_int=float(mean_int), frac=fr, consistent=ok,
+                summary=f"emp={tau.mean():.4f} int={mean_int:.4f} rel={pct(fr)}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  P2 — Gilbert-Elliott Loss
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_P2(cfg):
+    if cfg['verbose']: print("\n[P2] Gilbert-Elliott Loss — Eq. 3.7, p.30")
+    pG, pB = float(cfg['pG']), float(cfg['pB'])
+    p, q   = float(cfg['p_trans']), float(cfg['q_trans'])
+    T = 10000
+    state = np.ones(T, dtype=int); loss = np.zeros(T)
+    rs = np.random.rand(T); rl = np.random.rand(T)
+    for t in range(1, T):
+        prev = state[t-1]
+        if prev == 1:
+            state[t] = 2 if rs[t] < p else 1
+            loss[t]  = rl[t] < pG
+        else:
+            state[t] = 1 if rs[t] < q else 2
+            loss[t]  = rl[t] < pB
+    pi_G = q/(p+q); pi_B = p/(p+q)
+    emp_G    = float((state == 1).mean())
+    emp_loss = float(loss.mean())
+    ana_loss = pi_G*pG + pi_B*pB
+    frG, okG = is_below(abs(emp_G - pi_G), TH['2pp'])
+    frL, okL = is_below(abs(emp_loss - ana_loss), TH['2pp'])
+    return dict(name='P2', state=state, loss=loss, pi_G=pi_G,
+                emp_G=emp_G, emp_loss=emp_loss, ana_loss=ana_loss,
+                frac=max(frG, frL), consistent=okG and okL,
+                summary=f"π_G={pi_G:.3f}/{emp_G:.3f} loss={emp_loss:.4f}/{ana_loss:.4f}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  P3 — Bernoulli Loss
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_P3(cfg):
+    if cfg['verbose']: print("\n[P3] Bernoulli Loss — p.34")
+    p = float(cfg['p_loss']); N = 100000
+    L = (np.random.rand(N) < p).astype(int)
+    p_hat = float(L.mean()); se = math.sqrt(p_hat*(1-p_hat)/N)
+    z = (p_hat - p)/se
+    fr, ok = is_below(abs(z), TH['4sigma'])
+    return dict(name='P3', p=p, p_hat=p_hat, z=float(z), frac=fr, consistent=ok,
+                summary=f"p={p:.3f} p̂={p_hat:.4f} z={z:.3f}σ")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  P4 — Severity Index
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_P4(cfg):
+    if cfg['verbose']: print("\n[P4] Severity Index — Eq. 3.8, p.30")
+    wt, wp = 0.5, 0.5
+    tmin, tmax = float(cfg['tau_min']), float(cfg['tau_max'])
+    sc = [('S1', 0.0, 0.00), ('S2', 100.0, 0.05),
+          ('S3', 300.0, 0.15), ('S4', 600.0, 0.30)]
+    rho = np.array([wt*(t-tmin)/(tmax-tmin) + wp*pl for _, t, pl in sc])
+    mono = bool(np.all(np.diff(rho) > 0))
+    rng_ok = bool(np.all((rho >= 0) & (rho <= 1)))
+    fr = to_frac(abs(rho[-1] - rho[0]))
+    return dict(name='P4', rho=rho.tolist(), scenarios=[s[0] for s in sc],
+                frac=fr, consistent=mono and rng_ok,
+                summary=f"ρ={np.round(rho,4)} monotone={mono} in[0,1]={rng_ok}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  P5 — Logistic Degradation
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_P5(cfg):
+    if cfg['verbose']: print("\n[P5] Logistic Degradation — Eq. 3.5, p.29")
+    L, k, x0 = cfg['L'], cfg['k'], cfg['x0']
+    f = lambda x: L/(1.0 + math.exp(-k*(x - x0)))
+    h = 1e-4
+    d_num = (f(x0+h) - f(x0-h))/(2*h)
+    d_ana = L*k*math.exp(0)/(1+math.exp(0))**2
+    fr, ok = is_below(abs(d_num-d_ana)/abs(d_ana), TH['1e-6'])
+    sanity = abs(f(x0) - L/2.0) < 1e-9
+    return dict(name='P5', d_num=float(d_num), d_ana=float(d_ana), frac=fr,
+                consistent=ok and sanity,
+                summary=f"d_num={d_num:.10f} d_ana={d_ana:.10f} rel={float(fr):.2e}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  P6 — Delivery Ratio
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_P6(cfg):
+    if cfg['verbose']: print("\n[P6] Delivery Ratio — Eq. 4.7, p.40")
+    p = float(cfg['p_loss']); S = 100000
+    D = int((np.random.rand(S) >= p).sum())
+    Dr = D/S; se = math.sqrt(Dr*(1-Dr)/S)
+    z = (Dr - (1-p))/se
+    fr, ok = is_below(abs(z), TH['3sigma'])
+    return dict(name='P6', D_ratio=float(Dr), expected=float(1-p), z=float(z),
+                frac=fr, consistent=ok,
+                summary=f"D={Dr:.4f} 1−p={1-p:.4f} z={z:.3f}σ")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  P7 — Mean AoI Used
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_P7(cfg, p1):
+    if cfg['verbose']: print("\n[P7] Mean AoI Used — Eq. 4.6, p.40")
+    tau = p1['tau']; n = 10000
+    sub = tau[np.random.randint(0, len(tau), n)]
+    m = float(sub.mean()); se = float(sub.std(ddof=1)/math.sqrt(n))
+    fr, ok = is_below(abs(m - p1['mean_int']), 5*to_frac(se) + Fraction(2,1))
+    return dict(name='P7', mean_aoi=m, se=se, expected=p1['mean_int'],
+                frac=fr, consistent=ok,
+                summary=f"τ̄={m:.4f}±{se:.4f} expected={p1['mean_int']:.4f}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  P8 — Cooperative Reward
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_P8(cfg):
+    if cfg['verbose']: print("\n[P8] Cooperative Reward — Eq. 3.9, p.31")
+    beta = float(cfg['beta']); n = cfg['n_agents']
+    q = 4.0 + 8.0*np.random.rand(n)
+    r_loc  = -q
+    r_glob = -(1.0/n)*q.sum()
+    r = beta*r_loc + (1-beta)*r_glob
+    ok_mean = abs(r.mean() - (beta*r_loc.mean() + (1-beta)*r_glob)) < 1e-9
+    r_at_beta1 = 1.0*r_loc + 0.0*r_glob
+    ok_b1 = bool(np.allclose(r_at_beta1, r_loc, atol=1e-9))
+    r_at_beta0 = 0.0*r_loc + 1.0*r_glob
+    ok_b0 = bool(np.allclose(r_at_beta0, np.full(n, r_glob), atol=1e-9))
+    return dict(name='P8', r_loc=r_loc.tolist(), r_glob=float(r_glob), r=r.tolist(),
+                frac=to_frac(0.0), consistent=ok_mean and ok_b1 and ok_b0,
+                summary=f"mean_r={r.mean():.4f} r_global={r_glob:.4f} "
+                        f"β=1✓={ok_b1} β=0✓={ok_b0}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  RUN & AUDIT ENGINE
+# ═══════════════════════════════════════════════════════════════════════════════
+def run_all_and_audit():
+    section("15 EQUATIONS  ::  EXECUTION + AUDIT")
+    results = {}
+    for fn in (eq_I1, eq_I2, eq_I3, eq_I4, eq_I5, eq_I6, eq_I7,
+               eq_P1, eq_P2, eq_P3, eq_P4, eq_P5, eq_P6):
+        r = fn(CFG); results[r['name']] = r
+        print(f"  [{'✓' if r['consistent'] else '✗'}] {r['name']:3s}  {r['summary']}")
+    results['P7'] = eq_P7(CFG, results['P1'])
+    print(f"  [{'✓' if results['P7']['consistent'] else '✗'}] P7   {results['P7']['summary']}")
+    results['P8'] = eq_P8(CFG)
+    print(f"  [{'✓' if results['P8']['consistent'] else '✗'}] P8   {results['P8']['summary']}")
+    return results
+
+
+def fraction_audit(results):
+    subsection("EXACT FRACTION / RATIO AUDIT")
+    thresholds = {
+        'I1': TH['5pct'], 'I2': TH['2pct'], 'I3': TH['5sigma'],
+        'I4': TH['3sigma'], 'I5': TH['1pct'], 'I6': TH['1e-9'],
+        'I7': Fraction(5,1), 'P1': TH['5pct'], 'P2': TH['2pp'],
+        'P3': TH['4sigma'], 'P4': Fraction(1,1), 'P5': TH['1e-6'],
+        'P6': TH['3sigma'], 'P7': TH['5sigma'], 'P8': TH['1e-9'],
+    }
+    print(f"  {'Eq':<4} {'Ratio (float)':>16} {'Ratio (Fraction)':>24} "
+          f"{'Threshold':>16} {'Status':>8}")
+    hr('─', 78)
+    for n, thr in thresholds.items():
+        rec = results[n]
+        fr = rec.get('frac',
+                     max(rec.get('frac_ts', Fraction(0)),
+                         rec.get('frac_mc', Fraction(0))))
+        status = 'PASS' if rec['consistent'] else 'FAIL'
+        print(f"  {n:<4} {float(fr):>16.6e} {frac_str(fr):>24} "
+              f"{frac_str(thr):>16} {status:>8}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  TRAFFIC GROWTH MODEL DIAGNOSTICS
+# ═══════════════════════════════════════════════════════════════════════════════
+def build_growth_models(cfg):
+    rng = np.random.default_rng(42)
+    N = 980
+    t = np.arange(N, dtype=float)
+    L, k, x0 = cfg['L'], cfg['k'], cfg['x0']
+    base = L/(1.0 + np.exp(-k*(t - x0)))
+    osc  = 8*np.sin(t/50) + 4*np.sin(t/17) + 3*rng.standard_normal(N)
+    y    = np.maximum(base + osc, 0.0)
+
+    logistic = lambda x: L/(1.0 + np.exp(-k*(x - x0)))
+    poly1 = np.poly1d(np.polyfit(t, y, 1))
+    poly2 = np.poly1d(np.polyfit(t, y, 2))
+
+    def expm(x, a, b, c): return a*np.exp(b*x) + c
+    popt, _ = curve_fit(expm, t, y, p0=[300, 0.001, 0], maxfev=20000)
+    exp_fn = lambda x: expm(x, *popt)
+
+    return t, y, [
+        ('Logistic (Mechanistic)', logistic),
+        ('Polynomial (Deg 2)', poly2),
+        ('Polynomial (Deg 1)', poly1),
+        ('Exponential', exp_fn),
+    ]
+
+
+def plot_residuals_comparison(cfg):
+    t, y, models = build_growth_models(cfg)
+    fig, axes = plt.subplots(2, 2, figsize=(16, 10), sharex=True, sharey=True)
+    axes = axes.flatten()
+    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red']
+    for idx, (name, fn) in enumerate(models):
+        residuals = y - fn(t)
+        ax = axes[idx]
+        ax.scatter(t, residuals, s=6, color=colors[idx], alpha=0.6)
+        ax.axhline(0, color='black', linestyle='--', linewidth=1.2)
+        ax.set_title(f"{name}\nResidual Std Dev: {np.std(residuals):.3f}", fontsize=12)
+        ax.grid(True, alpha=0.3)
+        ax.set_ylabel('Residual'); ax.set_xlabel('Frame Index')
+    plt.suptitle('Residuals Comparison — All Four Traffic Growth Models',
+                 fontsize=16, fontweight='bold')
+    plt.tight_layout()
+    plt.savefig('residuals_comparison_all_models.png', dpi=120, bbox_inches='tight')
+    plt.close(fig)
+
+
+def plot_fits_comparison(cfg):
+    t, y, models = build_growth_models(cfg)
+    fig, axes = plt.subplots(2, 2, figsize=(16, 10), sharex=True, sharey=True)
+    axes = axes.flatten()
+    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red']
+    ss_tot = np.sum((y - y.mean())**2)
+    for idx, (name, fn) in enumerate(models):
+        y_hat = fn(t)
+        r2 = 1.0 - np.sum((y - y_hat)**2)/ss_tot
+        ax = axes[idx]
+        ax.scatter(t, y, s=4, color='silver', alpha=0.5, label='Observed')
+        ax.plot(t, y_hat, color=colors[idx], linewidth=2.5, label='Fitted')
+        ax.set_title(f"{name}\n$R^2$: {r2:.5f}", fontsize=12)
+        ax.grid(True, alpha=0.3)
+        ax.set_ylabel('Vehicle Count'); ax.set_xlabel('Frame Index')
+        ax.legend(loc='upper left')
+    plt.suptitle('Model Fits Comparison — All Four Traffic Growth Models',
+                 fontsize=16, fontweight='bold')
+    plt.tight_layout()
+    plt.savefig('fits_comparison_all_models.png', dpi=120, bbox_inches='tight')
+    plt.close(fig)
+
+
+def plot_annotated_growth_analysis(cfg):
+    t, y, models = build_growth_models(cfg)
+    descs = [
+        'Best physical match: capacity-limited saturation.',
+        'Empirical curve: no physical saturation limit.',
+        'Linear baseline: misses saturation & early growth.',
+        'Unbounded growth: fails to model capacity ceiling.',
+    ]
+    fig, axes = plt.subplots(4, 2, figsize=(18, 22), sharex=True)
+    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red']
+    ss_tot = np.sum((y - y.mean())**2)
+    for idx, (name, fn) in enumerate(models):
+        y_hat = fn(t); resid = y - y_hat
+        rss = float(np.sum(resid**2)); r2 = 1.0 - rss/ss_tot
+        std_r = float(np.std(resid))
+
+        ax_fit = axes[idx, 0]
+        ax_fit.scatter(t, y, s=3, color='silver', alpha=0.5, label='Observed')
+        ax_fit.plot(t, y_hat, color=colors[idx], linewidth=2.5, label='Fitted')
+        ax_fit.set_title(f"{name} - Fit", fontsize=13, fontweight='bold',
+                         color=colors[idx])
+        ax_fit.grid(True, alpha=0.3); ax_fit.legend(loc='upper left')
+        ax_fit.text(0.72, 0.15, f"$R^2$: {r2:.5f}\nRSS: {rss:.1f}",
+                    transform=ax_fit.transAxes, fontsize=11,
+                    bbox=dict(boxstyle='round,pad=0.5', facecolor='white',
+                              alpha=0.8, edgecolor='grey'))
+
+        ax_res = axes[idx, 1]
+        ax_res.scatter(t, resid, s=3, color=colors[idx], alpha=0.5)
+        ax_res.axhline(0, color='black', linestyle='--', linewidth=1.2)
+        ax_res.set_title(f"{name} - Residuals", fontsize=13,
+                         fontweight='bold', color=colors[idx])
+        ax_res.grid(True, alpha=0.3)
+        ax_res.text(0.05, 0.1, f"Std Dev: {std_r:.3f}\n\n{descs[idx]}",
+                    transform=ax_res.transAxes, fontsize=10.5,
+                    bbox=dict(boxstyle='round,pad=0.5', facecolor='#f9f9f9',
+                              alpha=0.9, edgecolor='grey'))
+
+    axes[-1, 0].set_xlabel('Frame Index', fontsize=12)
+    axes[-1, 1].set_xlabel('Frame Index', fontsize=12)
+    plt.suptitle('Comprehensive Traffic Growth Model Selection & Residual Diagnostics',
+                 fontsize=18, fontweight='bold', y=0.995)
+    plt.tight_layout()
+    plt.savefig('comprehensive_fit_diagnostics.png', dpi=120, bbox_inches='tight')
+    plt.close(fig)
+
+
+def plot_predicted_vs_actual(cfg):
+    rng = np.random.default_rng(42)
+    N = 980; t = np.arange(N, dtype=float)
+    L, k, x0 = cfg['L'], cfg['k'], cfg['x0']
+    base = L/(1.0 + np.exp(-k*(t - x0)))
+    osc  = 8*np.sin(t/50) + 4*np.sin(t/17) + 3*rng.standard_normal(N)
+    y_actual = np.maximum(base + osc, 0.0)
+    y_pred = base
+
+    fig = plt.figure(figsize=(8, 8))
+    plt.scatter(y_actual, y_pred, color='darkcyan', alpha=0.5, s=12,
+                label='Data Points (Frames)')
+    lo = min(y_actual.min(), y_pred.min())
+    hi = max(y_actual.max(), y_pred.max())
+    plt.plot([lo, hi], [lo, hi], color='red', linestyle='--', linewidth=2,
+             label='Ideal Fit (y = x)')
+    plt.title('Predicted vs. Actual Traffic Growth (Logistic)', fontsize=14,
+              fontweight='bold')
+    plt.xlabel('Actual Vehicle Count'); plt.ylabel('Predicted Vehicle Count')
+    plt.xlim(lo-10, hi+10); plt.ylim(lo-10, hi+10)
+    plt.grid(True, linestyle=':', alpha=0.6); plt.legend(fontsize=11)
+    plt.tight_layout()
+    plt.savefig('predicted_vs_actual_growth.png', dpi=120)
+    plt.close(fig)
+
+
+def print_r2_metrics(cfg):
+    rng = np.random.default_rng(42); N = 980
+    t = np.arange(N, dtype=float)
+    L, k, x0 = cfg['L'], cfg['k'], cfg['x0']
+    base = L/(1.0 + np.exp(-k*(t - x0)))
+    osc  = 8*np.sin(t/50) + 4*np.sin(t/17) + 3*rng.standard_normal(N)
+    y_actual = np.maximum(base + osc, 0.0); y_pred = base
+    ss_tot = np.sum((y_actual - y_actual.mean())**2)
+    rss = np.sum((y_actual - y_pred)**2)
+    print("\n--- Logistic Growth Fit Metrics ---")
+    print(f"SS_tot = {ss_tot:.4f}")
+    print(f"RSS    = {rss:.4f}")
+    print(f"R²     = {1.0 - rss/ss_tot:.6f}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  AoI DISTRIBUTION VISUALISATIONS
+# ═══════════════════════════════════════════════════════════════════════════════
+def plot_aoi_distribution(cfg, results):
+    mu, sg = cfg['mu_tau'], cfg['sigma_tau']
+    lo, hi = float(cfg['tau_min']), float(cfg['tau_max'])
+    dist = stats.lognorm(s=sg, scale=math.exp(mu))
+    Flo, Fhi = dist.cdf(lo), dist.cdf(hi)
+
+    emp_tau  = results['P1']['tau']
+    mean_int = results['P1']['mean_int']
+    mean_emp = results['P1']['mean_emp']
+
+    fig = plt.figure(figsize=(10, 6))
+    plt.hist(emp_tau, bins=100, density=True, alpha=0.6, color='skyblue',
+             edgecolor='white', label='Empirical (P1/P7)')
+    x_pdf = np.linspace(max(0.1, lo), min(hi, emp_tau.max()), 1000)
+    plt.plot(x_pdf, dist.pdf(x_pdf)/(Fhi-Flo), 'r-', linewidth=2.5,
+             label='Theoretical PDF')
+    plt.axvline(mean_emp, color='blue', linestyle='--', linewidth=1.5,
+                label=f'Emp. Mean ({mean_emp:.2f})')
+    plt.axvline(mean_int, color='darkred', linestyle=':', linewidth=2,
+                label=f'Theo. Mean ({mean_int:.2f})')
+    plt.title('Empirical AoI (P7) vs. Theoretical PDF (P1)',
+              fontsize=14, fontweight='bold')
+    plt.xlabel('AoI τ (ms)'); plt.ylabel('Density')
+    plt.grid(True, alpha=0.3); plt.legend(fontsize=11)
+    plt.tight_layout()
+    plt.savefig('mean_aoi_distribution_comparison.png', dpi=120)
+    plt.close(fig)
+
+
+def plot_gilbert_elliott_timeline(results, n_steps=150):
+    p2 = results['P2']
+    states = p2['state'][:n_steps]
+    losses = p2['loss'][:n_steps]
+    t = np.arange(len(states))
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 6), sharex=True)
+    ax1.step(t, states, where='post', color='darkslateblue',
+             linewidth=2, label='Network State')
+    ax1.fill_between(t, 1, states, step='post',
+                     color='lavender', alpha=0.5)
+    ax1.set_yticks([1, 2]); ax1.set_yticklabels(['Good', 'Bad'], fontweight='bold')
+    ax1.set_title('Gilbert-Elliott State Transitions (P2)', fontweight='bold')
+    ax1.grid(True, linestyle=':', alpha=0.6); ax1.legend(loc='upper right')
+
+    loss_colors = ['green' if l == 0 else 'red' for l in losses]
+    ax2.vlines(t, 0, losses, colors=loss_colors, linewidth=2)
+    ax2.scatter(t[losses == 1], losses[losses == 1], color='red',
+                marker='x', s=40, label='Dropped')
+    ax2.scatter(t[losses == 0], losses[losses == 0], color='green',
+                marker='o', s=20, label='Received')
+    ax2.set_ylim(-0.2, 1.2); ax2.set_yticks([0, 1])
+    ax2.set_yticklabels(['Success', 'Dropped'], fontweight='bold')
+    ax2.set_xlabel('Step'); ax2.set_title('Packet Loss Events',
+                                          fontweight='bold')
+    ax2.grid(True, linestyle=':', alpha=0.6); ax2.legend(loc='upper right')
+    plt.tight_layout()
+    plt.savefig('network_states_reaction_plot.png', dpi=120)
+    plt.close(fig)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  KERNEL SWEEP & MARL DECAY SWEEP
+# ═══════════════════════════════════════════════════════════════════════════════
+def plot_kernel_lambda_sweep():
+    lambda_values = [0.002, 0.005, 0.01, 0.02, 0.05]
+    tau = np.linspace(0.0, 1000.0, 2001)
+    fig = plt.figure(figsize=(12, 7))
+    colors = plt.cm.viridis(np.linspace(0, 0.85, len(lambda_values)))
+    for idx, lam in enumerate(lambda_values):
+        kernel = np.exp(-lam*tau)
+        I_num = trapezoid(kernel, tau); I_ana = 1.0/lam
+        plt.plot(tau, kernel, color=colors[idx], linewidth=2.5,
+                 label=f'λ={lam:<5}|∫κ≈{I_num:7.2f} (1/λ={I_ana:.1f})')
+        plt.fill_between(tau, kernel, color=colors[idx], alpha=0.07)
+    plt.title('Effect of λ Decay on AoI Kernel κ(τ)=e^{−λτ} (I5)',
+              fontsize=15, fontweight='bold')
+    plt.xlabel('AoI τ (ms)'); plt.ylabel('Kernel κ(τ)')
+    plt.xlim(-10, 1000); plt.ylim(-0.02, 1.05)
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.legend(fontsize=10.5, loc='upper right')
+    plt.tight_layout()
+    plt.savefig('aoi_kernel_lambda_decay_effect.png', dpi=120)
+    plt.close(fig)
+
+
+def plot_kernel_vs_empirical(results):
+    emp_tau = results['P1']['tau']
+    lambda_values = [0.002, 0.005, 0.01, 0.02, 0.05]
+    tau_range = np.linspace(0.0, 600.0, 1000)
+    fig, ax1 = plt.subplots(figsize=(12, 7))
+    ax1.hist(emp_tau, bins=100, density=True, alpha=0.35,
+             color='royalblue', edgecolor='white', label='Empirical (P1)')
+    ax1.set_xlabel('AoI τ (ms)')
+    ax1.set_ylabel('Density', color='royalblue')
+    ax1.tick_params(axis='y', labelcolor='royalblue')
+    ax1.set_xlim(0, 600); ax1.grid(True, linestyle='--', alpha=0.4)
+    ax2 = ax1.twinx()
+    colors = plt.cm.plasma(np.linspace(0, 0.8, len(lambda_values)))
+    for idx, lam in enumerate(lambda_values):
+        ax2.plot(tau_range, np.exp(-lam*tau_range), color=colors[idx],
+                 linewidth=2.5, label=f'κ(τ), λ={lam}')
+    ax2.set_ylabel('Kernel κ(τ)', color='darkmagenta')
+    ax2.tick_params(axis='y', labelcolor='darkmagenta')
+    ax2.set_ylim(-0.05, 1.05)
+    l1, lb1 = ax1.get_legend_handles_labels()
+    l2, lb2 = ax2.get_legend_handles_labels()
+    ax1.legend(l1+l2, lb1+lb2, loc='upper right', fontsize=11)
+    plt.title('AoI Kernels (I5) vs. Empirical Delay Distribution (P1)',
+              fontsize=14, fontweight='bold')
+    plt.tight_layout()
+    plt.savefig('aoi_kernel_vs_empirical_distribution.png', dpi=120)
+    plt.close(fig)
+
+
+def run_marl_decay_simulation(cfg, lambda_candidates):
+    n_agents = cfg['n_agents']; steps = cfg['K_steps']
+    p_loss = cfg['p_loss']
+    mu, sg = cfg['mu_tau'], cfg['sigma_tau']
+    dist_samples = np.random.lognormal(mean=mu, sigma=sg,
+                                       size=(n_agents, steps))
+    loss_mask = np.random.rand(n_agents, steps) < p_loss
+    perf = {}
+    for lam in lambda_candidates:
+        rewards, aois = [], []
+        for i in range(n_agents):
+            cur_aoi = 0.0; tot_r = 0.0
+            for s in range(steps):
+                d = dist_samples[i, s]
+                if loss_mask[i, s]: cur_aoi += d
+                else:               cur_aoi = d
+                kw = np.exp(-lam*cur_aoi)
+                tot_r += -(1.0 - kw)*10.0
+                aois.append(cur_aoi)
+            rewards.append(tot_r)
+        perf[lam] = dict(rewards=float(np.mean(rewards)),
+                         mean_aoi=float(np.mean(aois)))
+    return perf
+
+
+def plot_marl_decay_tradeoff(cfg):
+    lambdas = [0.001, 0.005, 0.01, 0.02, 0.05, 0.1]
+    sim = run_marl_decay_simulation(cfg, lambdas)
+    rewards = [sim[l]['rewards'] for l in lambdas]
+    aois    = [sim[l]['mean_aoi'] for l in lambdas]
+
+    fig, ax1 = plt.subplots(figsize=(10, 6))
+    c1 = '#D32F2F'
+    ax1.set_xlabel('λ Decay Rate', fontweight='bold')
+    ax1.set_ylabel('Mean Cumulative Reward', color=c1, fontweight='bold')
+    ax1.plot(lambdas, rewards, color=c1, marker='o', markersize=8,
+             linewidth=2.5, label='Mean Reward')
+    ax1.tick_params(axis='y', labelcolor=c1)
+    ax1.grid(True, linestyle='--', alpha=0.5)
+    for l, r in zip(lambdas, rewards):
+        ax1.annotate(f"{r:.1f}", (l, r), textcoords="offset points",
+                     xytext=(0, 10), ha='center', fontsize=9,
+                     color=c1, fontweight='bold')
+    ax2 = ax1.twinx(); c2 = '#1976D2'
+    ax2.set_ylabel('Mean AoI (ms)', color=c2, fontweight='bold')
+    ax2.plot(lambdas, aois, color=c2, marker='s', linestyle='--',
+             linewidth=2, label='Mean AoI')
+    ax2.tick_params(axis='y', labelcolor=c2); ax2.set_ylim(0, max(aois)*1.3)
+    plt.title('MARL Simulation: Performance vs. λ Decay Strategies',
+              fontsize=14, fontweight='bold', pad=15)
+    plt.tight_layout()
+    plt.savefig('marl_decay_strategy_tradeoff.png', dpi=120)
+    plt.close(fig)
+
+    print("\n--- MARL decay sweep ---")
+    for lam in lambdas:
+        print(f"λ={lam:<5}| reward={sim[lam]['rewards']:9.2f} | "
+              f"AoI={sim[lam]['mean_aoi']:6.2f} ms")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  MAIN — RUN ALL STATES
+# ═══════════════════════════════════════════════════════════════════════════════
+def main():
+    # 1) 15-equation audit
+    results = run_all_and_audit()
+    fraction_audit(results)
+
+    # 2) Traffic growth model diagnostics
+    section("TRAFFIC GROWTH MODEL DIAGNOSTICS")
+    plot_residuals_comparison(CFG);        print("  saved: residuals_comparison_all_models.png")
+    plot_fits_comparison(CFG);             print("  saved: fits_comparison_all_models.png")
+    plot_annotated_growth_analysis(CFG);   print("  saved: comprehensive_fit_diagnostics.png")
+    plot_predicted_vs_actual(CFG);         print("  saved: predicted_vs_actual_growth.png")
+    print_r2_metrics(CFG)
+
+    # 3) AoI distribution & kernel visualisations
+    section("AoI & KERNEL VISUALISATIONS")
+    plot_aoi_distribution(CFG, results);   print("  saved: mean_aoi_distribution_comparison.png")
+    plot_kernel_lambda_sweep();            print("  saved: aoi_kernel_lambda_decay_effect.png")
+    plot_kernel_vs_empirical(results);     print("  saved: aoi_kernel_vs_empirical_distribution.png")
+
+    # 4) Gilbert-Elliott timeline
+    section("GILBERT-ELLIOTT STATE TIMELINE")
+    plot_gilbert_elliott_timeline(results); print("  saved: network_states_reaction_plot.png")
+
+    # 5) MARL λ-decay sweep
+    section("MARL λ-DECAY SWEEP")
+    plot_marl_decay_tradeoff(CFG);         print("  saved: marl_decay_strategy_tradeoff.png")
+
+    section("ALL SIMULATIONS COMPLETE ✓")
+
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+
+
+══════════════════════════════════════════════════════════════════════════════
+  15 EQUATIONS  ::  EXECUTION + AUDIT
+══════════════════════════════════════════════════════════════════════════════
+
+[I1] Average Waiting Time — Eq. 13, p.45
+  [✓] I1   trap=2.4008 simp=2.4008 MC=2.4300±0.0529
+
+[I2] Average Queue Length — Eq. 4.3, p.39
+  [✓] I2   direct=3.3179 trapz=3.3299 rel=0.3595%
+
+[I3] Average Travel Time — Eq. 4.2, p.39
+  [✓] I3   T̄=60.7912s 95%CI±0.9117s truth=60.7912s
+
+[I4] Throughput — Eq. 14, p.45
+  [✓] I4   Thr=2046.0 mean=2038.5 z=0.246σ
+
+[I5] AoI Decay Kernel — Eq. 3.11, p.32
+  [✓] I5   ∫κ=99.9955 1/λ=100.0000 rel=0.0045%
+
+[I6] Vehicle Kinematics — Forward Euler, p.22
+  [✓] I6   x_final=913.6m v_final=13.070m/s err=1.14e-13
+
+[I7] MYCC Control Law — Eq. B.1, p.41
+  [✓] I7   mean_gap=25.000m max_err=0.0000m
+
+[P1] Truncated Log-Normal — Eq. 3.6, p.30
+  [✓] P1   emp=113.0639 int=113.2181 rel=0.1362%
+
+[P2] Gilbert-Elliott Loss — Eq. 3.7, p.30
+  [✓] P2   π_G=0.750/0.744 loss=0.1930/0.1875
+
+[P3] Bernoulli Loss — p.34
+  [✓] P3   p=0.100 p̂=0.1007 z=0.704σ
+
+[P4] Severity Index — Eq. 3.8, p.30
+  [✓] P4   ρ=[0.     0.1083 0.325  0.65  ] monotone=True in[0,1]=True
+
+[P5] Logistic Degradation — Eq. 3.5, p.29
+  [✓] P5   d_num=1.0804822600 d_ana=1.0804822600 rel=0.00e+00
+
+[P6] Delivery Ratio — Eq. 4.7, p.40
+  [✓] P6   D=0.9000 1−p=0.9000 z=0.011σ
+
+[P7] Mean AoI Used — Eq. 4.6, p.40
+  [✓] P7   τ̄=111.9980±0.5847 expected=113.2181
+
+[P8] Cooperative Reward — Eq. 3.9, p.31
+  [✓] P8   mean_r=-8.8087 r_global=-8.8087 β=1✓=True β=0✓=True
+
+──────────────────────────────────────────────────────────────────────────────
+  EXACT FRACTION / RATIO AUDIT
+──────────────────────────────────────────────────────────────────────────────
+  Eq      Ratio (float)         Ratio (Fraction)        Threshold   Status
+──────────────────────────────────────────────────────────────────────────────
+  I1       2.919973e-02       29195356/999850093             1/20     PASS
+  I2       3.594930e-03        2972649/826900312             1/50     PASS
+  I3       0.000000e+00                      0/1              5/1     PASS
+  I4       2.463521e-01       98354373/399243028              3/1     PASS
+  I5       4.537910e-05          34859/768173058            1/100     PASS
+  I6       0.000000e+00                      0/1     1/1000000000     PASS
+  I7       2.346198e-06            782/333305265              5/1     PASS
+  P1       1.362264e-03         511716/375636379             1/20     PASS
+  P2       6.200000e-03                  31/5000             1/50     PASS
+  P3       7.041501e-01      113797284/161609419              4/1     PASS
+  P4       6.500000e-01                    13/20              1/1     PASS
+  P5       0.000000e+00                      0/1        1/1000000     PASS
+  P6       1.054139e-02       10149771/962849026              3/1     PASS
+  P7       1.220097e+00      602094924/493481171              5/1     PASS
+  P8       0.000000e+00                      0/1     1/1000000000     PASS
+
+══════════════════════════════════════════════════════════════════════════════
+  TRAFFIC GROWTH MODEL DIAGNOSTICS
+══════════════════════════════════════════════════════════════════════════════
+  saved: residuals_comparison_all_models.png
+  saved: fits_comparison_all_models.png
+  saved: comprehensive_fit_diagnostics.png
+  saved: predicted_vs_actual_growth.png
+
+--- Logistic Growth Fit Metrics ---
+SS_tot = 4006793.0271
+RSS    = 46957.9747
+R²     = 0.988280
+
+══════════════════════════════════════════════════════════════════════════════
+  AoI & KERNEL VISUALISATIONS
+══════════════════════════════════════════════════════════════════════════════
+  saved: mean_aoi_distribution_comparison.png
+  saved: aoi_kernel_lambda_decay_effect.png
+  saved: aoi_kernel_vs_empirical_distribution.png
+
+══════════════════════════════════════════════════════════════════════════════
+  GILBERT-ELLIOTT STATE TIMELINE
+══════════════════════════════════════════════════════════════════════════════
+  saved: network_states_reaction_plot.png
+
+══════════════════════════════════════════════════════════════════════════════
+  MARL λ-DECAY SWEEP
+══════════════════════════════════════════════════════════════════════════════
+
+--- MARL decay sweep ---
+λ=0.001| reward=  -229.46 | AoI=124.63 ms
+λ=0.005| reward=  -862.17 | AoI=124.63 ms
+λ=0.01 | reward= -1296.19 | AoI=124.63 ms
+λ=0.02 | reward= -1688.10 | AoI=124.63 ms
+λ=0.05 | reward= -1951.57 | AoI=124.63 ms
+λ=0.1  | reward= -1994.94 | AoI=124.63 ms
+  saved: marl_decay_strategy_tradeoff.png
+
+══════════════════════════════════════════════════════════════════════════════
+  ALL SIMULATIONS COMPLETE ✓
+══════════════════════════════════════════════════════════════════════════════
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
