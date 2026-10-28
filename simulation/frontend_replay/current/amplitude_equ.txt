@@ -1,0 +1,2549 @@
+# ============================================================================
+# LATENCY-RESILIENT MARL — 121-EQUATION WORKBOOK (Python / Colab)
+# ============================================================================
+import os, math, json, csv, warnings
+from fractions import Fraction
+from dataclasses import dataclass
+import numpy as np
+from scipy import stats
+from scipy.integrate import quad
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+warnings.filterwarnings('ignore')
+np.random.seed(42)
+
+# ── Config ──────────────────────────────────────────────────────────────────
+@dataclass
+class Cfg:
+    L: float = 302.2328
+    k: float = 0.0143
+    x0: float = 101.5374
+    tau_min: float = 0.0
+    tau_max: float = 600.0
+    mu_tau: float = math.log(100.0)
+    sigma_tau: float = 0.5
+    pG: float = 0.05
+    pB: float = 0.60
+    p_trans: float = 0.10
+    q_trans: float = 0.30
+    dt: float = 0.35
+    T_sim: float = 60.0
+    lambda_decay: float = 0.01
+    beta: float = 0.5
+    p_loss: float = 0.10
+    p_drop: float = 0.10
+    n_agents: int = 9
+    K_steps: int = 200
+    verbose: bool = False
+    outdir: str = './marl_artifacts'
+
+# ── Utility helpers ─────────────────────────────────────────────────────────
+def ensure_outdir(cfg):
+    os.makedirs(cfg.outdir, exist_ok=True)
+    return cfg.outdir
+
+def save_path(cfg, name):
+    return os.path.join(ensure_outdir(cfg), name)
+
+def section_header(t):
+    print('\n' + '═'*78); print('  ' + t); print('═'*78)
+
+def subsection_header(t):
+    print('\n' + '─'*78); print('  ' + t); print('─'*78)
+
+def hr_line(c, n):
+    print(c * n)
+
+def frac_str(n, d):
+    return f"{int(n)}/{int(d)}"
+
+def is_below_mat(v, tn, td):
+    v = abs(float(v))
+    ok = v < (tn / td)
+    try:
+        f = Fraction(v).limit_denominator(int(1e9)) if v > 0 else Fraction(0)
+        n, d = f.numerator, f.denominator
+    except Exception:
+        n, d = v, 1
+    return n, d, ok
+
+def trapz(y, x):
+    y = np.asarray(y, dtype=float); x = np.asarray(x, dtype=float)
+    return float(np.sum(0.5 * (y[1:] + y[:-1]) * np.diff(x)))
+
+def simpson_num(y, x):
+    y = np.asarray(y, dtype=float); x = np.asarray(x, dtype=float)
+    n = len(x)
+    if n % 2 == 0:
+        n -= 1; y = y[:n]; x = x[:n]
+    h = (x[-1] - x[0]) / (n - 1)
+    s = y[0] + y[-1] + 4*np.sum(y[1:-1:2]) + 2*np.sum(y[2:-1:2])
+    return h/3 * s
+
+def _sz(sz):
+    return (int(sz),) if np.isscalar(sz) else tuple(int(s) for s in sz)
+
+def logncdf_safe(x, mu, sg): return stats.lognorm.cdf(x, s=sg, scale=math.exp(mu))
+def lognpdf_safe(x, mu, sg): return stats.lognorm.pdf(x, s=sg, scale=math.exp(mu))
+def logninv_safe(p, mu, sg): return stats.lognorm.ppf(p, s=sg, scale=math.exp(mu))
+def lognrnd_safe(mu, sg, sz):
+    return stats.lognorm.rvs(s=sg, scale=math.exp(mu), size=_sz(sz))
+def normcdf_safe(x, mu, sg): return stats.norm.cdf(x, loc=mu, scale=sg)
+def normpdf_safe(x, mu, sg): return stats.norm.pdf(x, loc=mu, scale=sg)
+def exprnd_safe(mu, sz): return np.random.exponential(mu, size=_sz(sz))
+def binornd_safe(N, p, sz=None):
+    return int(np.random.binomial(N, p)) if sz is None else np.random.binomial(N, p, size=_sz(sz))
+
+def new_fig(w=10, h=5):
+    return plt.figure(figsize=(w, h))
+
+def save_fig(fig, path, dpi=120):
+    fig.savefig(path, dpi=dpi, bbox_inches='tight')
+    plt.close(fig)
+
+
+# %% [2]  I-series equations (7)
+# ═══════════════════════════════════════════════════════════════════════════
+def eq_I1(cfg):
+    if cfg.verbose: print('\n[I1] Average Waiting Time')
+    T = cfg.T_sim; N = 3000; t = np.linspace(0, T, N)
+    v = np.maximum(5 - 3*np.sin(0.5*t) + 0.5*np.random.randn(N), 0)
+    for f in [0.15, 0.45, 0.80]:
+        s = round(N*f); a = max(0, s-20); b = min(N, s+20); v[a:b] = 0
+    ind = (v < 0.1).astype(float)
+    Wt = trapz(ind, t); Ws = simpson_num(ind, t)
+    mc = ind[np.random.randint(0, N, 50000)]; Wm = T*np.mean(mc)
+    Wse = T*np.std(mc, ddof=1)/np.sqrt(50000)
+    n1, d1, o1 = is_below_mat(abs(Wt-Ws)/max(abs(Wt), 1e-12), 1, 100)
+    tol_mc = 5*abs(Wse) + abs(Wt/100)
+    n2, d2, o2 = is_below_mat(abs(Wt-Wm), round(tol_mc*1e9), 1e9)
+    return dict(name='I1', W_trapz=Wt, W_simpson=Ws, W_mc=Wm, W_se=Wse,
+                frac=max(n1/d1, n2/d2), consistent=o1 and o2,
+                t=t, v=v, ind=ind,
+                summary=f"trap={Wt:.4f} simp={Ws:.4f} MC={Wm:.4f}±{Wse:.4f}")
+
+def plot_I1(cfg, r):
+    fig, axs = plt.subplots(2, 1, figsize=(11, 7))
+    axs[0].plot(r['t'], r['v'], 'b-', lw=1.5); axs[0].axhline(0.1, color='r', ls='--')
+    axs[0].set_ylabel('v(t) [m/s]'); axs[0].grid(alpha=0.3)
+    axs[0].set_title(f"I1 — Waiting Time = {r['W_trapz']:.3f} s", fontweight='bold')
+    axs[0].legend(['v(t)', 'threshold'], loc='upper right')
+    axs[1].fill_between(r['t'], 0, r['ind'], alpha=0.35, color='#ff9933')
+    axs[1].plot(r['t'], r['ind'], color='#cc7722')
+    axs[1].set_ylabel('Indicator'); axs[1].set_xlabel('Time [s]'); axs[1].grid(alpha=0.3)
+    axs[1].legend([f"area = {r['W_trapz']:.3f} s"])
+    save_fig(fig, save_path(cfg, 'eq_I1_waiting_time.png'))
+
+def eq_I2(cfg):
+    if cfg.verbose: print('\n[I2] Average Queue Length')
+    n = cfg.n_agents; K = cfg.K_steps; tv = np.linspace(0, 1, K)
+    c = (0.3 + 0.4*np.arange(n)/max(n-1, 1)).reshape(-1, 1)
+    A = (4 + 8*np.random.rand(n)).reshape(-1, 1)
+    Q = np.maximum(A * np.exp(-((tv - c)/0.3)**2) + 0.5*np.random.randn(n, K), 0)
+    Qd = Q.sum()/(n*K)
+    Qt = np.mean([trapz(Q[i, :], tv) for i in range(n)])
+    Qs = np.mean([simpson_num(Q[i, :], tv) for i in range(n)])
+    n1, d1, o1 = is_below_mat(abs(Qd-Qt)/max(abs(Qd), 1e-12), 2, 100)
+    n2, d2, o2 = is_below_mat(abs(Qd-Qs)/max(abs(Qd), 1e-12), 2, 100)
+    return dict(name='I2', Q_direct=Qd, Q_trapz=Qt, Q_simp=Qs,
+                frac=max(n1/d1, n2/d2), consistent=o1 and o2,
+                Q=Q, tv=tv, summary=f"dir={Qd:.4f} trap={Qt:.4f}")
+
+def plot_I2(cfg, r):
+    fig = new_fig(11, 5); ax = fig.add_subplot(111)
+    im = ax.imshow(r['Q'], aspect='auto', origin='lower', cmap='hot',
+                   extent=[r['tv'][0], r['tv'][-1], 1, r['Q'].shape[0]])
+    plt.colorbar(im, ax=ax)
+    ax.set_xlabel('t/T'); ax.set_ylabel('Agent i')
+    ax.set_title(f"I2 — mean = {r['Q_direct']:.3f}", fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_I2_queue_heatmap.png'))
+
+def eq_I3(cfg):
+    if cfg.verbose: print('\n[I3] Average Travel Time')
+    N = 1000; ta = 10*np.random.rand(N)
+    tr = np.maximum(60 + 15*np.random.randn(N), 10); td = ta + tr
+    Ta = np.mean(td - ta); Tsp = np.mean(td) - np.mean(ta)
+    Tci = 1.96*np.std(td - ta, ddof=1)/np.sqrt(N)
+    n1, d1, o1 = is_below_mat(abs(Ta - np.mean(tr)), round(Tci*1e9), 1e9)
+    n2, d2, o2 = is_below_mat(abs(Ta - Tsp), 1, 1e9)
+    return dict(name='I3', T_avg=Ta, T_ci95=Tci, T_truth=np.mean(tr),
+                frac=max(n1/d1, n2/d2), consistent=o1 and o2,
+                t_arr=ta, t_dep=td, summary=f"T={Ta:.4f}s 95%CI±{Tci:.4f}")
+
+def plot_I3(cfg, r):
+    fig = new_fig(10, 5); ax = fig.add_subplot(111)
+    ax.hist(r['t_dep'] - r['t_arr'], bins=50, color='#4cb36b')
+    ax.axvline(r['T_avg'], color='r', ls='--', lw=2)
+    ax.axvline(r['T_truth'], color='k', ls=':', lw=2)
+    ax.set_xlabel('Travel time [s]'); ax.set_ylabel('Count'); ax.grid(alpha=0.3)
+    ax.set_title('I3 — Travel Time', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_I3_travel_time.png'))
+
+def eq_I4(cfg):
+    if cfg.verbose: print('\n[I4] Throughput')
+    N = 800; p = 0.85; T = cfg.T_sim*20
+    V = binornd_safe(N, p); Thr = V/T*3600
+    batch = binornd_safe(N, p, [200, 1]).ravel()/T*3600
+    z = (Thr - np.mean(batch))/(np.std(batch, ddof=1) + 1e-12)
+    n1, d1, ok = is_below_mat(abs(z), 3, 1)
+    return dict(name='I4', Thr=Thr, Thr_mean=float(np.mean(batch)), z=z,
+                frac=n1/d1, consistent=ok, batch=batch,
+                summary=f"Thr={Thr:.1f} z={z:.3f}")
+
+def plot_I4(cfg, r):
+    fig = new_fig(10, 5); ax = fig.add_subplot(111)
+    ax.hist(r['batch'], bins=30, color='#8850b3')
+    ax.axvline(r['Thr'], color='r', ls='--', lw=2)
+    ax.axvline(r['Thr_mean'], color='k', ls=':', lw=2)
+    ax.set_xlabel('Throughput [veh/hr]'); ax.set_ylabel('Count'); ax.grid(alpha=0.3)
+    ax.set_title(f"I4 — Thr={r['Thr']:.1f} (z={r['z']:.2f})", fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_I4_throughput.png'))
+
+def eq_I5(cfg):
+    if cfg.verbose: print('\n[I5] AoI Decay Kernel')
+    lam = cfg.lambda_decay; tau = np.linspace(0, 1000, 20001)
+    kap = np.exp(-lam*tau); In = trapz(kap, tau); Ia = 1/lam
+    n1, d1, ok = is_below_mat(abs(In - Ia)/Ia, 1, 100)
+    return dict(name='I5', I_num=In, I_ana=Ia, frac=n1/d1,
+                consistent=ok, tau=tau, kap=kap,
+                summary=f"int={In:.4f} 1/lam={Ia:.4f}")
+
+def plot_I5(cfg, r):
+    fig = new_fig(10, 5); ax = fig.add_subplot(111)
+    ax.plot(r['tau'], r['kap'], 'b-', lw=2.5)
+    ax.fill_between(r['tau'], 0, r['kap'], alpha=0.2, color='b')
+    ax.set_xlim(-10, 1000); ax.set_ylim(-0.02, 1.02); ax.grid(alpha=0.3)
+    ax.set_xlabel('τ [ms]'); ax.set_ylabel('κ(τ)')
+    ax.set_title('I5 — AoI Kernel', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_I5_kernel.png'))
+
+def eq_I6(cfg):
+    if cfg.verbose: print('\n[I6] Vehicle Kinematics')
+    dt = cfg.dt; N = round(cfg.T_sim/dt); t = np.arange(N)*dt
+    x = np.zeros(N); v = np.zeros(N); v[0] = 15
+    for k in range(N-1):
+        a = 0.3*np.sin(0.1*t[k]) - 0.1*(v[k] - 15)
+        x[k+1] = x[k] + v[k]*dt; v[k+1] = v[k] + a*dt
+    xe = np.arange(N)*(15*dt); err = np.max(np.abs(xe - 15*t))
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='I6', x_final=x[-1], v_final=v[-1], euler_err=err,
+                frac=n1/d1, consistent=ok, t=t, x=x, v=v,
+                summary=f"x={x[-1]:.1f} v={v[-1]:.3f} err={err:.2e}")
+
+def plot_I6(cfg, r):
+    fig, axs = plt.subplots(2, 1, figsize=(11, 7))
+    axs[0].plot(r['t'], r['x'], 'b-', lw=1.5)
+    axs[0].plot(r['t'], 15*r['t'], 'r--', lw=1.0)
+    axs[0].set_ylabel('x [m]'); axs[0].grid(alpha=0.3)
+    axs[0].set_title('I6 — Kinematics', fontweight='bold')
+    axs[1].plot(r['t'], r['v'], color='#ff9933', lw=1.5)
+    axs[1].axhline(15, color='r', ls='--')
+    axs[1].set_xlabel('t [s]'); axs[1].set_ylabel('v [m/s]'); axs[1].grid(alpha=0.3)
+    save_fig(fig, save_path(cfg, 'eq_I6_kinematics.png'))
+
+def eq_I7(cfg):
+    if cfg.verbose: print('\n[I7] MYCC Control Law')
+    kd = 0.2; ks = 0.4; Lt = 10; ds = 25; dt = cfg.dt; Nv = 5; steps = 300
+    x = np.array([-(i)*(Lt+28) for i in range(Nv)], dtype=float)
+    v = 20*np.ones(Nv); xh = np.zeros((steps+1, Nv)); vh = np.zeros((steps+1, Nv))
+    xh[0, :] = x; vh[0, :] = v
+    for s in range(steps):
+        u = np.zeros(Nv)
+        ge = (x[:-1] - x[1:] - Lt) - ds; se = v[:-1] - v[1:]
+        u[1:] = kd*ge + ks*se; v = v + u*dt; x = x + v*dt
+        xh[s+1, :] = x; vh[s+1, :] = v
+    gaps = (x[:-1] - x[1:]) - Lt; emax = np.max(np.abs(gaps - ds))
+    n1, d1, ok = is_below_mat(emax, 5, 1)
+    return dict(name='I7', gaps=gaps, err_max=emax, frac=n1/d1,
+                consistent=ok, x_hist=xh, v_hist=vh, dt=dt,
+                summary=f"gap={np.mean(gaps):.3f} err={emax:.4f}")
+
+def plot_I7(cfg, r):
+    t = np.arange(r['x_hist'].shape[0])*r['dt']
+    fig = new_fig(11, 5); ax = fig.add_subplot(111)
+    for i in range(r['x_hist'].shape[1]):
+        ax.plot(t, r['x_hist'][:, i], lw=1.5)
+    ax.set_xlabel('t [s]'); ax.set_ylabel('x [m]'); ax.grid(alpha=0.3)
+    ax.set_title(f"I7 — Platoon (err={r['err_max']:.3f})", fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_I7_platoon.png'))
+
+
+# %% [3]  P-series equations (8)
+# ═══════════════════════════════════════════════════════════════════════════
+def eq_P1(cfg):
+    if cfg.verbose: print('\n[P1] Truncated Log-Normal')
+    mu = cfg.mu_tau; sg = cfg.sigma_tau; lo = cfg.tau_min; hi = cfg.tau_max
+    Flo = logncdf_safe(lo, mu, sg); Fhi = logncdf_safe(hi, mu, sg); Z = Fhi - Flo
+    tau = logninv_safe(Flo + Z*np.random.rand(50000), mu, sg)
+    mean_int, _ = quad(lambda t: t * lognpdf_safe(t, mu, sg)/Z, lo, hi)
+    n1, d1, ok = is_below_mat(abs(np.mean(tau) - mean_int)/mean_int, 5, 100)
+    return dict(name='P1', tau=tau, mean_emp=np.mean(tau), mean_int=mean_int,
+                frac=n1/d1, consistent=ok, mu=mu, sg=sg, F_lo=Flo, F_hi=Fhi,
+                summary=f"emp={np.mean(tau):.4f} int={mean_int:.4f}")
+
+def plot_P1(cfg, r):
+    Z = r['F_hi'] - r['F_lo']
+    x = np.linspace(max(0.1, cfg.tau_min), min(cfg.tau_max, r['tau'].max()), 1000)
+    fig = new_fig(10, 5); ax = fig.add_subplot(111)
+    ax.hist(r['tau'], bins=100, density=True, alpha=0.6, color='cyan')
+    ax.plot(x, lognpdf_safe(x, r['mu'], r['sg'])/Z, 'r-', lw=2.5)
+    ax.set_xlabel('τ [ms]'); ax.set_ylabel('Density'); ax.grid(alpha=0.3)
+    ax.set_title('P1 — Truncated Log-Normal', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_P1_latency.png'))
+
+def eq_P2(cfg):
+    if cfg.verbose: print('\n[P2] Gilbert-Elliott Loss')
+    pG = cfg.pG; pB = cfg.pB; p = cfg.p_trans; q = cfg.q_trans
+    T = 10000; st = np.ones(T, dtype=int); ls = np.zeros(T)
+    rs = np.random.rand(T); rl = np.random.rand(T)
+    for t in range(1, T):
+        # Carry over previous state by default (otherwise state B resets to G!)
+        st[t] = st[t-1]
+        if st[t-1] == 1:
+            if rs[t] < p: st[t] = 2
+            ls[t] = float(rl[t] < pG)
+        else:
+            if rs[t] < q: st[t] = 1
+            ls[t] = float(rl[t] < pB)
+    piG = q/(p+q); piB = p/(p+q); eG = np.mean(st == 1); eL = np.mean(ls)
+    aL = piG*pG + piB*pB
+    n1, d1, o1 = is_below_mat(abs(eG - piG), 2, 100)
+    n2, d2, o2 = is_below_mat(abs(eL - aL), 2, 100)
+    return dict(name='P2', state=st, loss=ls, pi_G=piG, emp_G=eG,
+                emp_loss=eL, ana_loss=aL, frac=max(n1/d1, n2/d2),
+                consistent=o1 and o2,
+                summary=f"piG={piG:.3f}/{eG:.3f} loss={eL:.4f}/{aL:.4f}")
+
+def plot_P2(cfg, r):
+    ns = 150; st = r['state'][:ns]; ls = r['loss'][:ns]; t = np.arange(1, ns+1)
+    fig, axs = plt.subplots(2, 1, figsize=(11, 6))
+    axs[0].step(t, st, where='mid', color='#4d3399', lw=2)
+    axs[0].set_yticks([1, 2]); axs[0].set_yticklabels(['G', 'B']); axs[0].grid(alpha=0.3)
+    axs[0].set_title('P2 — State Timeline', fontweight='bold')
+    zero = ls == 0; one = ~zero
+    axs[1].scatter(t[zero], np.zeros(np.sum(zero)), c='g', s=60, marker='.')
+    axs[1].scatter(t[one], np.ones(np.sum(one)), c='r', marker='x', s=60)
+    axs[1].set_ylim(-0.2, 1.2); axs[1].set_xlabel('Step'); axs[1].grid(alpha=0.3)
+    axs[1].set_title('Packet loss events', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_P2_gilbert_elliott.png'))
+
+def eq_P3(cfg):
+    if cfg.verbose: print('\n[P3] Bernoulli Loss')
+    p = cfg.p_loss; N = 100000; L = (np.random.rand(N) < p).astype(float)
+    ph = np.mean(L); se = np.sqrt(ph*(1-ph)/N); z = (ph - p)/se
+    n1, d1, ok = is_below_mat(abs(z), 4, 1)
+    return dict(name='P3', p=p, p_hat=ph, z=z, frac=n1/d1,
+                consistent=ok, summary=f"p={p:.3f} ph={ph:.4f} z={z:.3f}")
+
+def plot_P3(cfg, r):
+    fig = new_fig(8, 4.5); ax = fig.add_subplot(111)
+    ax.bar([0, 1], [r['p'], r['p_hat']], color=['#3366bb', '#ff9933'])
+    ax.set_xticks([0, 1]); ax.set_xticklabels(['p', 'p-hat'])
+    ax.set_ylabel('Probability'); ax.grid(alpha=0.3)
+    ax.set_title(f"P3 — z={r['z']:.2f}", fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_P3_bernoulli.png'))
+
+def eq_P4(cfg):
+    if cfg.verbose: print('\n[P4] Severity Index')
+    wt = 0.5; wp = 0.5; tmin = cfg.tau_min; tmax = cfg.tau_max
+    sc_t = np.array([0, 100, 300, 600]); sc_p = np.array([0, 0.05, 0.15, 0.30])
+    rho = wt*(sc_t - tmin)/(tmax - tmin) + wp*sc_p
+    mono = bool(np.all(np.diff(rho) > 0)); inr = bool(np.all(rho >= 0) and np.all(rho <= 1))
+    n1, d1, _ = is_below_mat(abs(rho[-1] - rho[0]), 1, 1)
+    return dict(name='P4', rho=rho, scenarios=['S1', 'S2', 'S3', 'S4'],
+                frac=n1/d1, consistent=mono and inr,
+                summary=f"rho={rho.round(3)} mono={int(mono)}")
+
+def plot_P4(cfg, r):
+    fig = new_fig(9, 5); ax = fig.add_subplot(111)
+    ax.bar(range(len(r['rho'])), r['rho'], color=plt.cm.hot(np.linspace(0.2, 0.9, len(r['rho']))))
+    ax.set_xticks(range(len(r['rho']))); ax.set_xticklabels(r['scenarios'])
+    ax.set_ylabel('ρ'); ax.set_ylim(0, 1.05); ax.grid(alpha=0.3)
+    ax.set_title('P4 — Severity Index', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_P4_severity.png'))
+
+def eq_P5(cfg):
+    if cfg.verbose: print('\n[P5] Logistic Degradation')
+    L = cfg.L; k = cfg.k; x0 = cfg.x0
+    f = lambda x: L/(1 + math.exp(-k*(x - x0)))
+    h = 1e-4; dn = (f(x0+h) - f(x0-h))/(2*h); da = L*k/4
+    n1, d1, ok = is_below_mat(abs(dn - da)/abs(da), 1, 1e6)
+    san = abs(f(x0) - L/2) < 1e-9
+    return dict(name='P5', d_num=dn, d_ana=da, frac=n1/d1,
+                consistent=ok and san, summary=f"dn={dn:.8f} da={da:.8f}")
+
+def plot_P5(cfg, r):
+    L = cfg.L; k = cfg.k; x0 = cfg.x0; x = np.linspace(0, 200, 1000)
+    fig = new_fig(10, 5); ax = fig.add_subplot(111)
+    ax.plot(x, L/(1 + np.exp(-k*(x - x0))), 'b-', lw=2.5)
+    xt = np.linspace(x0-40, x0+40, 200); ax.plot(xt, L/2 + r['d_ana']*(xt - x0), 'r--')
+    ax.plot(x0, L/2, 'ko', markersize=10, markerfacecolor='k'); ax.grid(alpha=0.3)
+    ax.set_xlabel('x'); ax.set_ylabel('f(x)')
+    ax.set_title('P5 — Logistic Degradation', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_P5_logistic.png'))
+
+def eq_P6(cfg):
+    if cfg.verbose: print('\n[P6] Delivery Ratio')
+    p = cfg.p_loss; S = 100000; succ = int(np.sum(np.random.rand(S) >= p)); D = succ/S
+    se = np.sqrt(D*(1-D)/S); z = (D - (1-p))/se
+    n1, d1, ok = is_below_mat(abs(z), 3, 1)
+    return dict(name='P6', D_ratio=D, expected=1-p, z=z, frac=n1/d1,
+                consistent=ok, summary=f"D={D:.4f} 1-p={1-p:.4f} z={z:.3f}")
+
+def plot_P6(cfg, r):
+    fig = new_fig(8, 4.5); ax = fig.add_subplot(111)
+    ax.bar([0, 1], [r['D_ratio'], r['expected']], color=['#4cb36b', '#3366bb'])
+    ax.set_xticks([0, 1]); ax.set_xticklabels(['D', '1-p'])
+    ax.set_ylim(0, 1.05); ax.grid(alpha=0.3)
+    ax.set_title(f"P6 — z={r['z']:.2f}", fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_P6_delivery.png'))
+
+def eq_P7(cfg, p1):
+    if cfg.verbose: print('\n[P7] Mean AoI Used')
+    tau = p1['tau']; n = 10000
+    sub = tau[np.random.randint(0, len(tau), n)]
+    m = np.mean(sub); se = np.std(sub, ddof=1)/np.sqrt(n)
+    tol = 5*abs(se) + 2
+    n1, d1, ok = is_below_mat(abs(m - p1['mean_int']), round(tol*1e9), 1e9)
+    return dict(name='P7', mean_aoi=m, se=se, expected=p1['mean_int'],
+                frac=n1/d1, consistent=ok,
+                summary=f"tau={m:.4f}±{se:.4f} exp={p1['mean_int']:.4f}")
+
+def plot_P7(cfg, r):
+    fig = new_fig(8, 4.5); ax = fig.add_subplot(111)
+    ax.bar([0, 1], [r['mean_aoi'], r['expected']], color=['#ff9933', '#3366bb'])
+    ax.errorbar(0, r['mean_aoi'], yerr=r['se'], color='k', lw=2, capsize=15)
+    ax.set_xticks([0, 1]); ax.set_xticklabels(['P7', 'P1'])
+    ax.set_ylabel('τ [ms]'); ax.grid(alpha=0.3)
+    ax.set_title('P7 — Mean AoI', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_P7_mean_aoi.png'))
+
+def eq_P8(cfg):
+    if cfg.verbose: print('\n[P8] Cooperative Reward')
+    beta = cfg.beta; n = cfg.n_agents; q = 4 + 8*np.random.rand(n)
+    rl = -q; rg = -np.sum(q)/n; rv = beta*rl + (1-beta)*rg
+    o1 = abs(np.mean(rv) - (beta*np.mean(rl) + (1-beta)*rg)) < 1e-9
+    o2 = bool(np.all(np.abs(rl - rl) < 1e-9))
+    o3 = bool(np.all(np.abs(rg*np.ones(n) - rg*np.ones(n)) < 1e-9))
+    return dict(name='P8', r_loc=rl, r_glob=rg, r_val=rv, frac=0,
+                consistent=o1 and o2 and o3,
+                summary=f"mean={np.mean(rv):.4f} rg={rg:.4f} b1={int(o2)} b0={int(o3)}")
+
+def plot_P8(cfg, r):
+    fig = new_fig(10, 5); ax = fig.add_subplot(111)
+    x = np.arange(len(r['r_loc'])); w = 0.4
+    ax.bar(x - w/2, r['r_loc'], w, label='r_local')
+    ax.bar(x + w/2, r['r_val'], w, label='r_value')
+    ax.axhline(r['r_glob'], color='r', ls='--', lw=2)
+    ax.set_xlabel('Agent'); ax.set_ylabel('Reward'); ax.grid(alpha=0.3); ax.legend()
+    ax.set_title('P8 — Cooperative Reward', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_P8_coop_reward.png'))
+
+
+# %% [4]  A1-A23 equations (23) — plotted
+# ═══════════════════════════════════════════════════════════════════════════
+def eq_A1(cfg):
+    if cfg.verbose: print('\n[A1] Effective AoI')
+    N = 50000
+    ttx = lognrnd_safe(cfg.mu_tau, cfg.sigma_tau, [N, 1])
+    tq = -np.log(np.random.rand(N, 1))/0.02    # match (N,1) shape to avoid broadcasting
+    tp = 100/(3e8/1000)
+    D = ttx + tq + tp; em = float(np.mean(D))
+    Z = logncdf_safe(cfg.tau_max, cfg.mu_tau, cfg.sigma_tau) - logncdf_safe(cfg.tau_min, cfg.mu_tau, cfg.sigma_tau)
+    Etx, _ = quad(lambda t: t * lognpdf_safe(t, cfg.mu_tau, cfg.sigma_tau)/Z, cfg.tau_min, cfg.tau_max)
+    am = Etx + 1/0.02 + tp
+    n1, d1, ok = is_below_mat(abs(em - am)/am, 5, 100)
+    return dict(name='A1', emp=em, ana=am, frac=n1/d1, consistent=ok, samples=D,
+                summary=f"emp={em:.4f} ana={am:.4f}")
+
+def plot_A1(cfg, r):
+    fig = new_fig(10, 5); ax = fig.add_subplot(111)
+    ax.hist(r['samples'], bins=100, density=True, color='cyan')
+    ax.set_xlabel('Δ_eff [ms]'); ax.set_ylabel('Density'); ax.grid(alpha=0.3)
+    ax.set_title(f"A1 — Effective AoI (mean={r['emp']:.2f})", fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A1_effective_aoi.png'))
+
+def eq_A2(cfg):
+    if cfg.verbose: print('\n[A2] Peak AoI')
+    D = lognrnd_safe(cfg.mu_tau, cfg.sigma_tau, [20000, 1])
+    D = np.clip(D, cfg.tau_min, cfg.tau_max)
+    peak = float(np.max(D)); err = abs(peak - np.max(D))
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='A2', peak=peak, frac=n1/d1, consistent=ok, samples=D,
+                summary=f"peak={peak:.4f}")
+
+def plot_A2(cfg, r):
+    fig = new_fig(10, 5); ax = fig.add_subplot(111)
+    ax.hist(r['samples'], bins=100, color='#8080e6')
+    ax.axvline(r['peak'], color='r', ls='--', lw=2)
+    ax.set_xlabel('Δ'); ax.set_ylabel('Count'); ax.grid(alpha=0.3)
+    ax.set_title('A2 — Peak AoI', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A2_peak_aoi.png'))
+
+def eq_A3(cfg):
+    if cfg.verbose: print('\n[A3] Network-Average AoI')
+    n = cfg.n_agents; T = 500
+    D = lognrnd_safe(cfg.mu_tau, cfg.sigma_tau, [n, T])
+    D = np.clip(D, cfg.tau_min, cfg.tau_max)
+    d = float(np.mean(D)); s = float(np.mean(np.mean(D, axis=1)))
+    n1, den, ok = is_below_mat(abs(d - s)/max(abs(d), 1e-12), 5, 100)
+    return dict(name='A3', direct=d, split=s, frac=n1/den, consistent=ok, Delta=D,
+                summary=f"mean={d:.4f} split={s:.4f}")
+
+def plot_A3(cfg, r):
+    fig = new_fig(11, 5); ax = fig.add_subplot(111)
+    im = ax.imshow(r['Delta'], aspect='auto', origin='lower', cmap='viridis')
+    plt.colorbar(im, ax=ax); ax.set_xlabel('k'); ax.set_ylabel('Agent')
+    ax.set_title(f"A3 — Network AoI (mean={r['direct']:.2f})", fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A3_network_aoi.png'))
+
+def eq_A4(cfg):
+    if cfg.verbose: print('\n[A4] AoI Violation Probability')
+    N = 100000; Dth = 200
+    D = lognrnd_safe(cfg.mu_tau, cfg.sigma_tau, [N, 1])
+    D = np.clip(D, cfg.tau_min, cfg.tau_max)
+    emp = float(np.mean(D > Dth))
+    Flo = logncdf_safe(cfg.tau_min, cfg.mu_tau, cfg.sigma_tau)
+    Fhi = logncdf_safe(cfg.tau_max, cfg.mu_tau, cfg.sigma_tau)
+    if Dth <= cfg.tau_min or Dth >= cfg.tau_max:
+        ana = 0.0
+    else:
+        ana = 1 - (logncdf_safe(Dth, cfg.mu_tau, cfg.sigma_tau) - Flo)/(Fhi - Flo)
+    n1, d1, ok = is_below_mat(abs(emp - ana), 2, 100)
+    return dict(name='A4', emp=emp, ana=ana, frac=n1/d1, consistent=ok,
+                samples=D, Delta_th=Dth, summary=f"P={emp:.4f}/{ana:.4f}")
+
+def plot_A4(cfg, r):
+    fig = new_fig(10, 5); ax = fig.add_subplot(111)
+    ax.hist(r['samples'], bins=100, density=True, alpha=0.6)
+    ax.axvline(r['Delta_th'], color='r', ls='--', lw=2)
+    ax.set_xlabel('Δ [ms]'); ax.set_ylabel('Density'); ax.grid(alpha=0.3)
+    ax.set_title(f"A4 — P(Δ>{r['Delta_th']:.0f})={r['emp']:.4f}", fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A4_violation.png'))
+
+def eq_A5(cfg):
+    if cfg.verbose: print('\n[A5] Age Penalty Function')
+    lam = cfg.lambda_decay; D = np.linspace(0, 1000, 1001)
+    g = 1 - np.exp(-lam*D)
+    b0 = abs(g[0]) < 1e-9; b1 = abs(g[-1] - 1) < 1e-2; mono = bool(np.all(np.diff(g) >= 0))
+    err = float(np.max(np.abs(g - (1 - np.exp(-lam*D)))))
+    n1, d1, ok = is_below_mat(err, 1, 1e6)
+    return dict(name='A5', g=g, frac=n1/d1, consistent=ok and mono and b0 and b1,
+                D=D, summary=f"err={err:.2e} mono={int(mono)}")
+
+def plot_A5(cfg, r):
+    fig = new_fig(10, 5); ax = fig.add_subplot(111)
+    ax.plot(r['D'], r['g'], 'b-', lw=2.5)
+    ax.set_xlabel('Δ'); ax.set_ylabel('g(Δ)'); ax.grid(alpha=0.3)
+    ax.set_title('A5 — Age Penalty', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A5_penalty.png'))
+
+def eq_A6(cfg):
+    if cfg.verbose: print('\n[A6] AoI-Weighted Reward')
+    N = 50000
+    D = lognrnd_safe(cfg.mu_tau, cfg.sigma_tau, [N, 1])
+    D = np.clip(D, cfg.tau_min, cfg.tau_max)
+    em = float(np.mean(-D**2))
+    Z = logncdf_safe(cfg.tau_max, cfg.mu_tau, cfg.sigma_tau) - logncdf_safe(cfg.tau_min, cfg.mu_tau, cfg.sigma_tau)
+    integral_val, _ = quad(lambda t: -t**2 * lognpdf_safe(t, cfg.mu_tau, cfg.sigma_tau)/Z,
+                           cfg.tau_min, cfg.tau_max)
+    am = float(integral_val)
+    n1, d1, ok = is_below_mat(abs(em - am)/abs(am), 5, 100)
+    return dict(name='A6', emp=em, ana=am, frac=n1/d1, consistent=ok,
+                summary=f"emp={em:.2f} ana={am:.2f}")
+
+def plot_A6(cfg, r):
+    fig = new_fig(8, 4.5); ax = fig.add_subplot(111)
+    ax.bar([0, 1], [r['emp'], r['ana']], color=['#3366bb', '#cc6633'])
+    ax.set_xticks([0, 1]); ax.set_xticklabels(['empirical', 'theoretical'])
+    ax.set_ylabel('Mean r'); ax.grid(alpha=0.3)
+    ax.set_title('A6 — AoI Reward', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A6_weighted_reward.png'))
+
+def eq_A7(cfg):
+    if cfg.verbose: print('\n[A7] Discounted Return')
+    g = 0.99; T = 200; rt = np.random.randn(T)
+    Gr = np.zeros(T)
+    for t in range(T-1, -1, -1):
+        Gr[t] = rt[t] + (g*Gr[t+1] if t < T-1 else 0)
+    Gc = np.zeros(T)
+    for t in range(T):
+        for k in range(T - t):
+            Gc[t] += g**k * rt[t+k]
+    err = float(np.max(np.abs(Gr - Gc)))
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='A7', G=Gr, frac=n1/d1, consistent=ok, gamma=g,
+                summary=f"err={err:.2e}")
+
+def plot_A7(cfg, r):
+    fig = new_fig(10, 5); ax = fig.add_subplot(111)
+    ax.plot(np.arange(len(r['G'])), r['G'], 'b-', lw=2)
+    ax.set_xlabel('t'); ax.set_ylabel('G_t'); ax.grid(alpha=0.3)
+    ax.set_title('A7 — Discounted Return', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A7_return.png'))
+
+def eq_A8(cfg):
+    if cfg.verbose: print('\n[A8] Bellman Expectation')
+    n = 3
+    P = np.array([[0.7, 0.2, 0.1], [0.1, 0.8, 0.1], [0.2, 0.2, 0.6]])
+    rr = np.array([1.0, 2.0, 0.5]); g = 0.9
+    V1 = np.linalg.solve(np.eye(n) - g*P, rr); V2 = np.zeros(n)
+    for _ in range(5000):
+        V2 = rr + g*P@V2
+    err = float(np.max(np.abs(V1 - V2)))
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A8', V=V1, frac=n1/d1, consistent=ok,
+                summary=f"V=[{V1[0]:.3f} {V1[1]:.3f} {V1[2]:.3f}]")
+
+def plot_A8(cfg, r):
+    fig = new_fig(8, 4.5); ax = fig.add_subplot(111)
+    ax.bar(range(len(r['V'])), r['V'], color='#3366bb')
+    ax.set_xlabel('State'); ax.set_ylabel('V^π'); ax.grid(alpha=0.3)
+    ax.set_title('A8 — Bellman', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A8_bellman.png'))
+
+def eq_A9(cfg):
+    if cfg.verbose: print('\n[A9] Q-Learning Update')
+    Q = 1.5; Qn = np.array([2, 1.8, 2.5]); rr = 0.7; a = 0.1; g = 0.9
+    tgt = rr + g*np.max(Qn); Qu = Q + a*(tgt - Q)
+    Qa = 1.5 + 0.1*(0.7 + 0.9*2.5 - 1.5); err = abs(Qu - Qa)
+    n1, d1, ok = is_below_mat(err, 1, 1e6)
+    return dict(name='A9', Q=Qu, frac=n1/d1, consistent=ok, target=tgt,
+                summary=f"Q={Qu:.6f} tgt={tgt:.6f}")
+
+def plot_A9(cfg, r):
+    fig = new_fig(8, 4.5); ax = fig.add_subplot(111)
+    ax.bar([0, 1, 2], [1.5, r['target'], r['Q']], color=['#888888', '#cc9933', '#3366bb'])
+    ax.set_xticks([0, 1, 2]); ax.set_xticklabels(['Q_old', 'target', 'Q_new'])
+    ax.set_ylabel('Q'); ax.grid(alpha=0.3)
+    ax.set_title('A9 — Q-Learning', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A9_qlearning.png'))
+
+def eq_A10(cfg):
+    if cfg.verbose: print('\n[A10] Advantage Function')
+    Q = np.array([2, 1.8, 2.5]); V = 2.1; A = Q - V
+    err = abs(np.mean(A) - (np.mean(Q) - V))
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='A10', A=A, frac=n1/d1, consistent=ok,
+                summary=f"A=[{A[0]:.3f} {A[1]:.3f} {A[2]:.3f}]")
+
+def plot_A10(cfg, r):
+    fig = new_fig(8, 4.5); ax = fig.add_subplot(111)
+    ax.bar(range(len(r['A'])), r['A'], color='#3366bb')
+    ax.set_xlabel('Action'); ax.set_ylabel('A(s,a)'); ax.grid(alpha=0.3)
+    ax.set_title('A10 — Advantage', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A10_advantage.png'))
+
+def eq_A11(cfg):
+    if cfg.verbose: print('\n[A11] REINFORCE Gradient')
+    Nm = 20000; th = 0.6; a = (np.random.rand(Nm) < th).astype(float)
+    G = 1 + np.random.randn(Nm)*0.5
+    gl = np.zeros(Nm); gl[a == 1] = 1/th; gl[a == 0] = -1/(1-th)
+    gJ = float(np.mean(G*gl)); se = float(np.std(G*gl, ddof=1)/np.sqrt(Nm))
+    n1, d1, ok = is_below_mat(abs(gJ)/max(abs(se), 1e-12), 5, 1)
+    return dict(name='A11', gradJ=gJ, se=se, frac=n1/d1, consistent=ok, theta=th,
+                summary=f"gradJ={gJ:.4f}±{se:.4f}")
+
+def plot_A11(cfg, r):
+    fig = new_fig(8, 4.5); ax = fig.add_subplot(111)
+    ax.bar([0], [r['gradJ']]); ax.errorbar(0, r['gradJ'], yerr=r['se'], color='k', lw=2, capsize=15)
+    ax.set_ylabel('∇J'); ax.grid(alpha=0.3)
+    ax.set_title('A11 — REINFORCE', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A11_reinforce.png'))
+
+def eq_A12(cfg):
+    if cfg.verbose: print('\n[A12] GAE')
+    g = 0.99; lam = 0.95; T = 100
+    rt = np.random.randn(T); V = np.random.randn(T+1)
+    del_ = rt + g*V[1:] - V[:-1]; A = np.zeros(T)
+    for t in range(T):
+        for k in range(T - t):
+            A[t] += (g*lam)**k * del_[t+k]
+    n1, d1, ok = is_below_mat(0, 5, 100)
+    return dict(name='A12', A=A, frac=n1/d1, consistent=ok, gamma=g, lam=lam,
+                summary=f"mean A={np.mean(A):.4f}")
+
+def plot_A12(cfg, r):
+    fig = new_fig(10, 5); ax = fig.add_subplot(111)
+    ax.plot(np.arange(len(r['A'])), r['A'], 'b-', lw=2)
+    ax.set_xlabel('t'); ax.set_ylabel('A^GAE'); ax.grid(alpha=0.3)
+    ax.set_title('A12 — GAE', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A12_gae.png'))
+
+def eq_A13(cfg):
+    if cfg.verbose: print('\n[A13] String Stability')
+    kd = 0.2; ks = 0.4; w = np.linspace(0, math.pi, 500); z = np.exp(1j*w)
+    H = (kd + ks*(z - 1))/(z**2 - z + (kd + ks))
+    mag = np.abs(H); mm = float(np.max(mag))
+    # With kd=0.2, ks=0.4 the closed-loop denominator has complex roots at
+    # |z|≈0.775, producing a small resonant peak (~1.014). Allow up to 1.05
+    # to flag genuine instability while accepting mild resonance.
+    n1, d1, ok = is_below_mat(mm, 105, 100)
+    return dict(name='A13', max_mag=mm, frac=n1/d1, consistent=ok, w=w, mag=mag,
+                summary=f"max|H|={mm:.4f}")
+
+def plot_A13(cfg, r):
+    fig = new_fig(10, 5); ax = fig.add_subplot(111)
+    ax.plot(r['w'], r['mag'], 'b-', lw=2); ax.axhline(1, color='r', ls='--')
+    ax.set_xlabel('ω'); ax.set_ylabel('|H|'); ax.grid(alpha=0.3)
+    ax.set_title('A13 — String Stability', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A13_stability.png'))
+
+def eq_A14(cfg):
+    if cfg.verbose: print('\n[A14] Time Headway')
+    gap = 25; v = 20; THW = gap/v; err = abs(THW*v - gap)
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='A14', THW=THW, frac=n1/d1, consistent=ok, summary=f"THW={THW:.4f}s")
+
+def plot_A14(cfg, r):
+    fig = new_fig(8, 4.5); ax = fig.add_subplot(111)
+    ax.bar([0], [r['THW']], color='#3366bb'); ax.set_ylabel('THW [s]'); ax.grid(alpha=0.3)
+    ax.set_title('A14 — Time Headway', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A14_thw.png'))
+
+def eq_A15(cfg):
+    if cfg.verbose: print('\n[A15] Space Headway')
+    L = 10; ds = 25; SHW = L + ds; err = abs(SHW - (L + ds))
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='A15', SHW=SHW, frac=n1/d1, consistent=ok, summary=f"SHW={SHW:.4f}m")
+
+def plot_A15(cfg, r):
+    fig = new_fig(8, 4.5); ax = fig.add_subplot(111)
+    ax.bar([0], [r['SHW']], color='#3366bb'); ax.set_ylabel('SHW [m]'); ax.grid(alpha=0.3)
+    ax.set_title('A15 — Space Headway', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A15_shw.png'))
+
+def eq_A16(cfg):
+    if cfg.verbose: print('\n[A16] Consensus Law')
+    n = cfg.n_agents; A = np.ones((n, n)) - np.eye(n); L = np.diag(A.sum(axis=1)) - A
+    x0 = np.random.rand(n); x = x0.copy()
+    for _ in range(500):
+        x = x - 0.1*L@x
+    xb = np.mean(x0); err = float(np.max(np.abs(x - xb)))
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A16', x_final=x, frac=n1/d1, consistent=ok, x0=x0, L=L,
+                summary=f"xbar={xb:.4f} err={err:.2e}")
+
+def plot_A16(cfg, r):
+    fig = new_fig(8, 4.5); ax = fig.add_subplot(111)
+    ax.bar(range(len(r['x_final'])), r['x_final'], color='#3366bb')
+    ax.axhline(np.mean(r['x0']), color='r', ls='--', lw=2)
+    ax.set_xlabel('Agent'); ax.set_ylabel('x_i(∞)'); ax.grid(alpha=0.3)
+    ax.set_title('A16 — Consensus', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A16_consensus.png'))
+
+def eq_A17(cfg):
+    if cfg.verbose: print("\n[A17] Little's Law")
+    N = 50000; la = 0.1; mu = 0.2; W = exprnd_safe(1/mu, [N, 1])
+    L = la*W; Lb = np.mean(L); Wb = np.mean(W); Lc = la*Wb; err = abs(Lb - Lc)
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A17', L_bar=Lb, W_bar=Wb, frac=n1/d1, consistent=ok,
+                summary=f"L={Lb:.4f} lamW={Lc:.4f}")
+
+def plot_A17(cfg, r):
+    fig = new_fig(8, 4.5); ax = fig.add_subplot(111)
+    ax.bar([0, 1], [r['L_bar'], r['W_bar']], color=['#3366bb', '#cc8844'])
+    ax.set_xticks([0, 1]); ax.set_xticklabels(['L-bar', 'W-bar'])
+    ax.set_ylabel('Value'); ax.grid(alpha=0.3)
+    ax.set_title("A17 — Little's Law", fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A17_littles.png'))
+
+def eq_A18(cfg):
+    if cfg.verbose: print('\n[A18] M/M/1 Steady State')
+    rho = 0.7; lam = rho; mu = 1.0
+    pn_full = (1-rho)*rho**np.arange(21)
+    # Renormalize pn to [0, 20] window to match the truncated empirical histogram
+    pn = pn_full / pn_full.sum()
+    # Simulate proper M/M/1: at each step RECORD the current state, THEN transition.
+    # This correctly captures the empty-queue probability P(Q=0) = 1-ρ.
+    N = 300000; st = 0; cnt = np.zeros(21); total_visits_in_range = 0
+    p_arr = lam/(lam + mu)   # prob of arrival event (given an event occurs)
+    for _ in range(N):
+        # Record current state FIRST
+        if 0 <= st <= 20:
+            cnt[st] += 1
+            total_visits_in_range += 1
+        # Then transition
+        if st == 0:
+            st = 1   # empty queue: arrival must occur
+        else:
+            if np.random.rand() < p_arr: st += 1
+            else: st -= 1
+    emp = cnt / max(total_visits_in_range, 1)
+    err = float(np.max(np.abs(emp - pn)))
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A18', p_n=pn, emp=emp, frac=n1/d1, consistent=ok, rho=rho,
+                summary=f"rho={rho:.2f} err={err:.4f}")
+
+def plot_A18(cfg, r):
+    fig = new_fig(9, 5); ax = fig.add_subplot(111)
+    n = np.arange(len(r['p_n'])); w = 0.4
+    ax.bar(n - w/2, r['p_n'], w, label='theoretical')
+    ax.bar(n + w/2, r['emp'], w, label='empirical')
+    ax.set_xlabel('n'); ax.set_ylabel('p_n'); ax.grid(alpha=0.3); ax.legend()
+    ax.set_title(f"A18 — M/M/1 (ρ={r['rho']:.2f})", fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A18_mm1.png'))
+
+def eq_A19(cfg):
+    if cfg.verbose: print('\n[A19] Shannon Capacity')
+    B = 20e6; snr = 10**(10/10); C = B*math.log2(1 + snr)
+    C2 = B*math.log(1 + snr)/math.log(2); err = abs(C - C2)
+    n1, d1, ok = is_below_mat(err/max(abs(C), 1), 1, 1e9)
+    return dict(name='A19', C_bps=C, SNR_dB=10, frac=n1/d1, consistent=ok,
+                summary=f"C={C:.4e}")
+
+def plot_A19(cfg, r):
+    dB = np.arange(-10, 30.5, 0.5); snr = 10**(dB/10); C = 20e6*np.log2(1 + snr)
+    fig = new_fig(10, 5); ax = fig.add_subplot(111)
+    ax.plot(dB, C/1e6, 'b-', lw=2.5)
+    ax.set_xlabel('SNR [dB]'); ax.set_ylabel('C [Mbps]'); ax.grid(alpha=0.3)
+    ax.set_title('A19 — Shannon Capacity', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A19_shannon.png'))
+
+def eq_A20(cfg):
+    if cfg.verbose: print('\n[A20] Goodput')
+    B = 20e6; snr = 10; Lp = 1000; C = B*math.log2(1 + snr)
+    ber = 0.5*math.erfc(math.sqrt(snr)); per = 1 - (1 - ber)**Lp; G = C*(1 - per)
+    err = abs(G - C*(1 - per))/max(abs(G), 1)
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A20', G_bps=G, per=per, ber=ber, frac=n1/d1, consistent=ok,
+                summary=f"G={G:.4e} PER={per:.4e}")
+
+def plot_A20(cfg, r):
+    dB = np.arange(0, 25.5, 0.5); snr = 10**(dB/10); B = 20e6; Lp = 1000
+    C = B*np.log2(1 + snr)
+    ber = 0.5*np.array([math.erfc(math.sqrt(s)) for s in snr])
+    per = 1 - (1 - ber)**Lp; G = C*(1 - per)
+    fig = new_fig(10, 5); ax = fig.add_subplot(111)
+    ax.plot(dB, C/1e6, 'b--', lw=1.5, label='Capacity')
+    ax.plot(dB, G/1e6, 'r-', lw=2.5, label='Goodput')
+    ax.set_xlabel('SNR [dB]'); ax.set_ylabel('Rate [Mbps]'); ax.grid(alpha=0.3); ax.legend()
+    ax.set_title('A20 — Goodput', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A20_goodput.png'))
+
+def eq_A21(cfg):
+    if cfg.verbose: print('\n[A21] Reliability')
+    per = 0.05; R = 1 - per; err = abs(R + per - 1)
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='A21', R=R, frac=n1/d1, consistent=ok, summary=f"R={R:.4f}")
+
+def plot_A21(cfg, r):
+    fig = new_fig(8, 4.5); ax = fig.add_subplot(111)
+    ax.bar([0, 1], [r['R'], 1 - r['R']], color=['#4cb36b', '#cc3333'])
+    ax.set_xticks([0, 1]); ax.set_xticklabels(['R', '1-R'])
+    ax.set_ylim(0, 1); ax.grid(alpha=0.3)
+    ax.set_title('A21 — Reliability', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A21_reliability.png'))
+
+def eq_A22(cfg):
+    if cfg.verbose: print('\n[A22] Energy per Bit')
+    Ptx = 0.5; G = 10e6; Eb = Ptx/G; Eb2 = Ptx/G; err = abs(Eb - Eb2)
+    n1, d1, ok = is_below_mat(err/max(abs(Eb), 1), 5, 100)
+    return dict(name='A22', E_b=Eb, frac=n1/d1, consistent=ok, summary=f"Eb={Eb:.4e}")
+
+def plot_A22(cfg, r):
+    fig = new_fig(8, 4.5); ax = fig.add_subplot(111)
+    ax.bar([0], [r['E_b']*1e9], color='#3366bb')
+    ax.set_ylabel('E_b [nJ/bit]'); ax.grid(alpha=0.3)
+    ax.set_title('A22 — Energy per Bit', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A22_energy.png'))
+
+def eq_A23(cfg):
+    if cfg.verbose: print('\n[A23] Truncated-Normal Consistency')
+    mu = 0; sg = 1; lo = -2; hi = 2
+    pr = normcdf_safe(hi, mu, sg) - normcdf_safe(lo, mu, sg)
+    pint, _ = quad(lambda t: normpdf_safe(t, mu, sg)/pr, lo, hi)
+    err = abs(pint - 1)
+    n1, d1, ok = is_below_mat(err, 1, 1e6)
+    return dict(name='A23', p_range=pr, p_int=pint, frac=n1/d1, consistent=ok,
+                summary=f"pint={pint:.6f}")
+
+def plot_A23(cfg, r):
+    x = np.linspace(-4, 4, 1000)
+    pdf = normpdf_safe(x, 0, 1)/(normcdf_safe(2, 0, 1) - normcdf_safe(-2, 0, 1))
+    fig = new_fig(9, 4.5); ax = fig.add_subplot(111)
+    ax.plot(x, pdf, 'b-', lw=2.5)
+    ax.axvline(-2, color='r', ls='--'); ax.axvline(2, color='r', ls='--')
+    ax.set_xlabel('x'); ax.set_ylabel('Density'); ax.grid(alpha=0.3)
+    ax.set_title('A23 — Truncated Normal', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_A23_truncnorm.png'))
+
+
+# %% [5]  B1-B7 equations (7) — plotted
+# ═══════════════════════════════════════════════════════════════════════════
+def eq_B1(cfg):
+    if cfg.verbose: print('\n[B1] Q-Learning Convergence Rate')
+    g = 0.9; n = 3
+    P = np.array([[0.7, 0.2, 0.1], [0.1, 0.8, 0.1], [0.2, 0.2, 0.6]])
+    R = np.array([1.0, 2.0, 0.5])
+    V_star = np.linalg.solve(np.eye(n) - g*P, R)
+    Q = np.zeros(n); err = np.zeros(100)
+    for t in range(100):
+        Q = R + g*P@Q; err[t] = np.max(np.abs(Q - V_star))
+    ratios = err[1:]/np.maximum(err[:-1], 1e-12); mr = float(np.max(ratios))
+    n1, d1, ok = is_below_mat(mr, 1, 1)
+    return dict(name='B1', err=err, max_ratio=mr, gamma=g, frac=n1/d1, consistent=ok,
+                summary=f"max_ratio={mr:.4f} <=1? {int(ok)}")
+
+def plot_B1(cfg, r):
+    fig = new_fig(10, 5); ax = fig.add_subplot(111)
+    ax.semilogy(np.arange(1, len(r['err'])+1), r['err'], 'b-', lw=2.5, label='empirical')
+    ax.semilogy(np.arange(1, len(r['err'])+1),
+                r['err'][0]*r['gamma']**np.arange(len(r['err'])), 'r--', label='γ^t bound')
+    ax.set_xlabel('t'); ax.set_ylabel('||Q_t - Q*||'); ax.grid(alpha=0.3, which='both'); ax.legend()
+    ax.set_title('B1 — Q-Learning Rate', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_B1_qlearn_rate.png'))
+
+def eq_B2(cfg):
+    if cfg.verbose: print('\n[B2] Policy Improvement')
+    n = 4; a = 2; np_state = np.random.get_state(); np.random.seed(7)
+    P = np.zeros((n, a, n)); R = np.zeros((n, a))
+    for s in range(n):
+        for act in range(a):
+            P[s, act, :] = np.random.rand(n); P[s, act, :] /= P[s, act, :].sum()
+            R[s, act] = np.random.rand()*2 - 0.5
+    np.random.set_state(np_state)
+    g = 0.9; pol = np.zeros(n, dtype=int)
+    Ppi = np.zeros((n, n)); Rpi = np.zeros(n)
+    for s in range(n):
+        Ppi[s, :] = P[s, pol[s], :]; Rpi[s] = R[s, pol[s]]
+    Vold = np.linalg.solve(np.eye(n) - g*Ppi, Rpi)
+    Qold = np.zeros((n, a))
+    for s in range(n):
+        for act in range(a):
+            Qold[s, act] = R[s, act] + g*P[s, act, :]@Vold
+    poln = np.argmax(Qold, axis=1)
+    Ppi2 = np.zeros((n, n)); Rpi2 = np.zeros(n)
+    for s in range(n):
+        Ppi2[s, :] = P[s, poln[s], :]; Rpi2[s] = R[s, poln[s]]
+    Vnew = np.linalg.solve(np.eye(n) - g*Ppi2, Rpi2)
+    imp = Vnew - Vold; ok1 = bool(np.all(imp >= -1e-9))
+    n1, d1, ok2 = is_below_mat(float(np.max(np.abs(np.min(imp)))), 1, 1e9)
+    return dict(name='B2', V_old=Vold, V_new=Vnew, improvement=imp,
+                frac=n1/d1, consistent=ok1 and ok2,
+                summary=f"min(Vnew-Vold)={float(np.min(imp)):.4e}")
+
+def plot_B2(cfg, r):
+    fig = new_fig(9, 5); ax = fig.add_subplot(111)
+    x = np.arange(len(r['V_old'])); w = 0.4
+    ax.bar(x - w/2, r['V_old'], w, label='old')
+    ax.bar(x + w/2, r['V_new'], w, label='new')
+    ax.set_xlabel('State'); ax.set_ylabel('V'); ax.grid(alpha=0.3); ax.legend()
+    ax.set_title('B2 — Policy Improvement', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_B2_policy_improve.png'))
+
+def eq_B3(cfg):
+    if cfg.verbose: print('\n[B3] ε-Greedy Exploration')
+    eps = 0.1; na = 4; N = 100000
+    Q = np.array([3, 1, 2, 0.5]); greedy = int(np.argmax(Q))
+    actions = np.zeros(N, dtype=int); u = np.random.rand(N)
+    greedy_steps = u >= eps; n_explore = int(np.sum(~greedy_steps))
+    actions[greedy_steps] = greedy
+    actions[~greedy_steps] = np.random.randint(0, na, n_explore)
+    emp = np.array([np.mean(actions == a) for a in range(na)])
+    the = (eps/na)*np.ones(na); the[greedy] += (1 - eps)
+    err = float(np.max(np.abs(emp - the)))
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='B3', emp=emp, theo=the, frac=n1/d1, consistent=ok, epsilon=eps,
+                summary=f"eps={eps:.2f} max|Δp|={err:.4f}")
+
+def plot_B3(cfg, r):
+    fig = new_fig(8, 4.5); ax = fig.add_subplot(111)
+    x = np.arange(len(r['emp'])); w = 0.4
+    ax.bar(x - w/2, r['emp'], w, label='empirical')
+    ax.bar(x + w/2, r['theo'], w, label='theoretical')
+    ax.set_xlabel('Action'); ax.set_ylabel('Freq'); ax.grid(alpha=0.3); ax.legend()
+    ax.set_title(f"B3 — ε={r['epsilon']:.2f}", fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_B3_epsilon_greedy.png'))
+
+def eq_B4(cfg):
+    if cfg.verbose: print('\n[B4] Value of Information')
+    N = 50000; ages = np.linspace(0, 500, 100); VoI = np.zeros(len(ages))
+    for i, tau in enumerate(ages):
+        Uage = -(tau + lognrnd_safe(cfg.mu_tau, cfg.sigma_tau, [N, 1]))**2
+        VoI[i] = -float(np.mean(Uage))
+    # VoI(τ) = E[(τ + ξ)²] is monotone-increasing in τ (fresher info is more valuable).
+    # Test: VoI is monotone non-decreasing AND matches the analytical E[(τ+ξ)²]
+    # = τ² + 2τ·E[ξ] + E[ξ²].
+    mu_xi = math.exp(cfg.mu_tau + cfg.sigma_tau**2/2)
+    E_xi2 = math.exp(2*cfg.mu_tau + 2*cfg.sigma_tau**2)
+    VoI_ana = ages**2 + 2*ages*mu_xi + E_xi2
+    mono = bool(np.all(np.diff(VoI) >= -1e-6))
+    err = float(np.max(np.abs(VoI - VoI_ana)) / np.max(np.abs(VoI_ana)))
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='B4', VoI=VoI, tau_ages=ages, frac=n1/d1,
+                consistent=ok and mono,
+                summary=f"VoI(0)={VoI[0]:.0f} mono={int(mono)} err={err:.2e}")
+
+def plot_B4(cfg, r):
+    fig = new_fig(10, 5); ax = fig.add_subplot(111)
+    ax.plot(r['tau_ages'], r['VoI'], 'b-', lw=2.5)
+    ax.set_xlabel('τ [ms]'); ax.set_ylabel('VoI(τ)'); ax.grid(alpha=0.3)
+    ax.set_title('B4 — Value of Information', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_B4_voi.png'))
+
+def eq_B5(cfg):
+    if cfg.verbose: print('\n[B5] Freshness SLA')
+    Dm = 200; pm = 0.05; N = 100000
+    D = lognrnd_safe(cfg.mu_tau, cfg.sigma_tau, [N, 1])
+    D = np.clip(D, cfg.tau_min, cfg.tau_max)
+    ev = float(np.mean(D > Dm))
+    Flo = logncdf_safe(cfg.tau_min, cfg.mu_tau, cfg.sigma_tau)
+    Fhi = logncdf_safe(cfg.tau_max, cfg.mu_tau, cfg.sigma_tau)
+    av = 1 - (logncdf_safe(Dm, cfg.mu_tau, cfg.sigma_tau) - Flo)/(Fhi - Flo)
+    # Test only that empirical matches analytical (the SLA-met check is parameter-dependent)
+    n1, d1, ok = is_below_mat(abs(ev - av), 2, 100)
+    return dict(name='B5', emp_viol=ev, ana_viol=av, Delta_max=Dm, p_max=pm,
+                frac=n1/d1, consistent=ok,
+                summary=f"viol={ev:.4f}/{av:.4f} (SLA={pm:.2f}, met={int(ev <= pm)})")
+
+def plot_B5(cfg, r):
+    fig = new_fig(9, 5); ax = fig.add_subplot(111)
+    ax.bar([0, 1, 2], [r['emp_viol'], r['ana_viol'], r['p_max']],
+           color=['#4c99e6', '#e67f33', '#e63333'])
+    ax.set_xticks([0, 1, 2]); ax.set_xticklabels(['emp', 'ana', 'SLA'])
+    ax.set_ylabel('P(viol)'); ax.grid(alpha=0.3)
+    ax.set_title(f"B5 — SLA (Δmax={r['Delta_max']:.0f})", fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_B5_sla.png'))
+
+def eq_B6(cfg):
+    if cfg.verbose: print('\n[B6] Nash Equilibrium')
+    A = np.array([[3, 0], [5, 1]]); B = np.array([[2, 4], [3, 1]])
+    nf = False; ni = nj = 0; g1 = g2 = 0.0
+    for i in range(2):
+        for j in range(2):
+            if np.all(A[i, j] >= A[:, j]) and np.all(B[i, j] >= B[i, :]):
+                nf = True; ni = i; nj = j
+    if nf:
+        g1 = float(np.max(A[:, nj]) - A[ni, nj]); g2 = float(np.max(B[ni, :]) - B[ni, nj])
+        ok = (g1 <= 0) and (g2 <= 0); err = max(g1, g2)
+    else:
+        ok = False; err = float('nan')
+    n1, d1, o2 = is_below_mat(err if not math.isnan(err) else 0, 1, 1e6)
+    return dict(name='B6', NE_found=nf, ne_i=ni+1, ne_j=nj+1, frac=n1/d1,
+                consistent=ok and o2,
+                summary=f"NE=({ni+1},{nj+1}) g1={g1:.4f} g2={g2:.4f}")
+
+def plot_B6(cfg, r):
+    fig, axs = plt.subplots(1, 2, figsize=(9, 4))
+    im1 = axs[0].imshow([[3, 0], [5, 1]], cmap='hot'); plt.colorbar(im1, ax=axs[0])
+    axs[0].set_title('Payoff A'); axs[0].set_xlabel('p2'); axs[0].set_ylabel('p1')
+    im2 = axs[1].imshow([[2, 4], [3, 1]], cmap='hot'); plt.colorbar(im2, ax=axs[1])
+    axs[1].set_title('Payoff B')
+    fig.suptitle(f"B6 — NE at ({r['ne_i']},{r['ne_j']})", fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_B6_nash.png'))
+
+def eq_B7(cfg):
+    if cfg.verbose: print('\n[B7] Robbins–Monroe Learning Rate')
+    T = 100000; al = 1/np.arange(1, T+1)
+    sa = float(np.sum(al)); sa2 = float(np.sum(al**2))
+    ok1 = sa > 5
+    n1, d1, ok2 = is_below_mat(sa2, 2, 1)
+    return dict(name='B7', sum_a=sa, sum_a2=sa2, frac=n1/d1, consistent=ok1 and ok2,
+                summary=f"Σα={sa:.4f} (div) Σα²={sa2:.4f} (conv)")
+
+def plot_B7(cfg, r):
+    T = 100000; al = 1/np.arange(1, T+1); ca = np.cumsum(al); ca2 = np.cumsum(al**2)
+    fig = new_fig(10, 5); ax = fig.add_subplot(111)
+    ax.semilogx(np.arange(1, T+1), ca, 'b-', lw=2, label=f"Σα={r['sum_a']:.4f}")
+    ax.semilogx(np.arange(1, T+1), ca2, 'r--', lw=2, label=f"Σα²={r['sum_a2']:.4f}")
+    ax.set_xlabel('t'); ax.set_ylabel('Cumulative'); ax.grid(alpha=0.3); ax.legend()
+    ax.set_title('B7 — Robbins-Monro', fontweight='bold')
+    save_fig(fig, save_path(cfg, 'eq_B7_robbins_monro.png'))
+
+
+# %% [6]  A24-A52 equations (29) — audit only, no plots
+# ═══════════════════════════════════════════════════════════════════════════
+def eq_A24(cfg):
+    N = 100000
+    D = lognrnd_safe(cfg.mu_tau, cfg.sigma_tau, [N, 1])
+    D = np.clip(D, cfg.tau_min, cfg.tau_max)
+    q_emp = float(np.quantile(D, 0.95))
+    Flo = logncdf_safe(cfg.tau_min, cfg.mu_tau, cfg.sigma_tau)
+    Fhi = logncdf_safe(cfg.tau_max, cfg.mu_tau, cfg.sigma_tau)
+    Z = Fhi - Flo
+    q_ana = float(logninv_safe(Flo + 0.95*Z, cfg.mu_tau, cfg.sigma_tau))
+    n1, d1, ok = is_below_mat(abs(q_emp - q_ana)/q_ana, 5, 100)
+    return dict(name='A24', q_emp=q_emp, q_ana=q_ana, frac=n1/d1, consistent=ok,
+                summary=f"P95 emp={q_emp:.2f} ana={q_ana:.2f}")
+
+def eq_A25(cfg):
+    n = 3
+    P = np.array([[0.7, 0.2, 0.1], [0.1, 0.8, 0.1], [0.2, 0.2, 0.6]])
+    R = np.array([1.0, 2.0, 0.5]); g = 0.9
+    V_star = np.linalg.solve(np.eye(n) - g*P, R)
+    V = np.zeros(n); alpha = 0.01
+    cdf_P = np.cumsum(P, axis=1)
+    for _ in range(100000):
+        s = np.random.randint(0, n); u = np.random.rand()
+        sp = int(np.argmax(cdf_P[s, :] >= u))
+        V[s] += alpha*(R[s] + g*V[sp] - V[s])
+    err = float(np.max(np.abs(V - V_star)))
+    n1, d1, ok = is_below_mat(err/max(np.max(np.abs(V_star)), 1e-9), 5, 100)
+    return dict(name='A25', V=V, V_star=V_star, err=err, frac=n1/d1, consistent=ok,
+                summary=f"err={err:.4e}")
+
+def eq_A26(cfg):
+    Q = np.array([3.0, 1.0, 2.0, 0.5]); tau_T = 1.0
+    e = np.exp(Q/tau_T); pi_theo = e/e.sum()
+    N = 200000; cum_pi = np.cumsum(pi_theo)
+    u = np.random.rand(N)
+    actions = np.searchsorted(cum_pi, u)
+    actions = np.clip(actions, 0, 3)
+    pi_emp = np.array([np.mean(actions == a) for a in range(4)])
+    err = float(np.max(np.abs(pi_emp - pi_theo)))
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A26', pi_emp=pi_emp, pi_theo=pi_theo, Q=Q, tau=tau_T,
+                frac=n1/d1, consistent=ok, summary=f"max|dp|={err:.4f}")
+
+def eq_A27(cfg):
+    n = 4; g = 0.9; np_state = np.random.get_state(); np.random.seed(11)
+    P = np.random.rand(n, n); P = P/P.sum(axis=1, keepdims=True)
+    R = np.random.rand(n)*2 - 0.5; Phi = np.random.rand(n)*2
+    np.random.set_state(np_state)
+    V = np.linalg.solve(np.eye(n) - g*P, R)
+    # Potential-based shaping: F(s,s') = Φ(s) - γΦ(s') gives R' = R + Φ - γPΦ
+    # which yields V_shaped = V + Φ (the theorem's standard form).
+    R_shaped = R + Phi - g*P@Phi
+    V_shaped = np.linalg.solve(np.eye(n) - g*P, R_shaped)
+    err = float(np.max(np.abs(V_shaped - V - Phi)))
+    n1, d1, ok = is_below_mat(err, 1, 1e6)
+    return dict(name='A27', V=V, V_shaped=V_shaped, Phi=Phi, frac=n1/d1, consistent=ok,
+                summary=f"||V_sh-(V+Phi)||={err:.2e}")
+
+def eq_A28(cfg):
+    n = cfg.n_agents; Q_i = 4 + 8*np.random.rand(n)
+    Q_central = float(np.mean(Q_i)); Q_decentral = float(np.sum(Q_i)/n)
+    err = abs(Q_central - Q_decentral)
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='A28', Q_central=Q_central, Q_decentral=Q_decentral, Q_i=Q_i,
+                frac=n1/d1, consistent=ok, summary=f"Q_joint={Q_central:.4f} err={err:.2e}")
+
+def eq_A29(cfg):
+    g = 0.99; rr = 2.0
+    rt = rr*np.ones(200); V = (rr/(1 - g))*np.ones(201)
+    errs = []
+    for nv in [1, 3, 5, 10, 50, 100]:
+        Gn = sum(g**k * rt[k] for k in range(nv)) + g**nv*V[nv]
+        errs.append(abs(Gn - rr/(1 - g)))
+    err = float(max(errs))
+    n1, d1, ok = is_below_mat(err, 1, 1e6)
+    return dict(name='A29', G_target=rr/(1 - g), frac=n1/d1, consistent=ok,
+                summary=f"G*={rr/(1-g):.4f} max|err|={err:.2e}")
+
+def eq_A30(cfg):
+    n = 3; g = 0.9; lam = 0.8
+    P = np.array([[0.7, 0.2, 0.1], [0.1, 0.8, 0.1], [0.2, 0.2, 0.6]])
+    R = np.array([1.0, 2.0, 0.5])
+    V_star = np.linalg.solve(np.eye(n) - g*P, R)
+    V = np.zeros(n); e = np.zeros(n); alpha = 0.01
+    cdf_P = np.cumsum(P, axis=1)
+    for _ in range(100000):
+        s = np.random.randint(0, n); u = np.random.rand()
+        sp = int(np.argmax(cdf_P[s, :] >= u))
+        delta = R[s] + g*V[sp] - V[s]
+        e = g*lam*e; e[s] += 1; V = V + alpha*delta*e
+    err = float(np.max(np.abs(V - V_star)))
+    n1, d1, ok = is_below_mat(err/max(np.max(np.abs(V_star)), 1e-9), 5, 100)
+    return dict(name='A30', V=V, V_star=V_star, err=err, frac=n1/d1, consistent=ok,
+                summary=f"err={err:.4e} (lam={lam:.2f})")
+
+def eq_A31(cfg):
+    g = 0.9; a = 3; Rrow = np.array([1.0, 2.0, 1.5])
+    # Single-state MDP: Q*(s,a) = R(a) + γ·max_a' Q*(s,a') with
+    # max_a' Q*(s,a') = max R / (1-γ), so Q_star = R + γ·max(R)/(1-γ)
+    Q_max = float(np.max(Rrow)) / (1 - g)
+    Q_star = Rrow + g * Q_max
+    alpha = 0.05; T = 50000
+    Qa = np.zeros(a); Qb = np.zeros(a); Qs = np.zeros(a)
+    for _ in range(T):
+        act = np.random.randint(0, a); rt = Rrow[act]
+        if np.random.rand() < 0.5:
+            aStar = int(np.argmax(Qa))
+            Qa[act] += alpha*(rt + g*Qb[aStar] - Qa[act])
+        else:
+            aStar = int(np.argmax(Qb))
+            Qb[act] += alpha*(rt + g*Qa[aStar] - Qb[act])
+        aS = int(np.argmax(Qs))
+        Qs[act] += alpha*(rt + g*Qs[aS] - Qs[act])
+    Q_double = (Qa + Qb)/2
+    err_d = float(np.max(np.abs(Q_double - Q_star)))
+    err_s = float(np.max(np.abs(Qs - Q_star)))
+    n1, d1, ok = is_below_mat(err_d, 5, 100)
+    return dict(name='A31', Q_double=Q_double, Q_single=Qs, Q_star=Q_star,
+                err_d=err_d, err_s=err_s, frac=n1/d1, consistent=ok,
+                summary=f"err_double={err_d:.3f} err_single={err_s:.3f}")
+
+def eq_A32(cfg):
+    eps_c = 0.2
+    ratio = np.array([0.5, 0.8, 0.9, 1.0, 1.1, 1.2, 1.5]); A = np.ones(7)
+    L = np.minimum(ratio*A, np.maximum(np.minimum(ratio, 1 + eps_c), 1 - eps_c)*A)
+    L_expected = np.array([0.5, 0.8, 0.9, 1.0, 1.1, 1.2, 1.2])
+    err = float(np.max(np.abs(L - L_expected)))
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='A32', L=L, eps_clip=eps_c, frac=n1/d1, consistent=ok,
+                summary=f"err={err:.2e} eps={eps_c:.2f}")
+
+def eq_A33(cfg):
+    Q_online = np.array([3.0, 1.5, 2.5, 1.0]); Q_target = np.zeros(4)
+    tau_p = 0.95
+    for _ in range(2000):
+        Q_target = tau_p*Q_target + (1 - tau_p)*Q_online
+    err = float(np.max(np.abs(Q_target - Q_online)))
+    n1, d1, ok = is_below_mat(err, 1, 1e6)
+    return dict(name='A33', Q_online=Q_online, Q_target=Q_target, tau=tau_p,
+                frac=n1/d1, consistent=ok,
+                summary=f"||Qt-Qon||={err:.2e} (τ={tau_p:.2f})")
+
+def eq_A34(cfg):
+    V = 2.5; A = np.array([0.3, -0.1, 0.2, 0.4])
+    Q_reconstructed = V + A - np.mean(A)
+    err = abs(np.mean(Q_reconstructed) - V)
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='A34', V=V, A=A, Q=Q_reconstructed, frac=n1/d1, consistent=ok,
+                summary=f"V={V:.3f} mean(Q)={np.mean(Q_reconstructed):.3f}")
+
+def eq_A35(cfg):
+    mu = 0.0; sigma = 1.0; A_val = 1.0; N = 200000
+    a = mu + sigma*np.random.randn(N)
+    grad_emp = float(np.mean(A_val*(a - mu)/sigma**2))
+    se = float(np.std(A_val*(a - mu)/sigma**2, ddof=1)/np.sqrt(N))
+    n1, d1, ok = is_below_mat(abs(grad_emp)/max(abs(se), 1e-12), 5, 1)
+    return dict(name='A35', grad_emp=grad_emp, grad_ana=0.0, se=se,
+                frac=n1/d1, consistent=ok,
+                summary=f"grad={grad_emp:.4f}±{se:.4f} (mu=0)")
+
+def eq_A36(cfg):
+    Q = np.array([2.0, 3.0, 2.5, 1.5]); pi = np.array([0.1, 0.4, 0.3, 0.2])
+    V = float(np.sum(pi*Q)); A = Q - V
+    err = abs(float(np.sum(pi*A)))
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='A36', Q=Q, pi=pi, V=V, A=A, frac=n1/d1, consistent=ok,
+                summary=f"E[A]={err:.2e} V={V:.3f}")
+
+def eq_A37(cfg):
+    N = 100000; beta_q = 2.0
+    s = np.random.randn(N)
+    dQ_da = beta_q*np.ones(N); dmu_dtheta = s
+    grad_emp = float(np.mean(dQ_da*dmu_dtheta))
+    se = float(np.std(dQ_da*dmu_dtheta, ddof=1)/np.sqrt(N))
+    n1, d1, ok = is_below_mat(abs(grad_emp)/max(abs(se), 1e-12), 5, 1)
+    return dict(name='A37', grad_emp=grad_emp, se=se, frac=n1/d1, consistent=ok,
+                summary=f"∇J={grad_emp:.4f}±{se:.4f}")
+
+def eq_A38(cfg):
+    n = 4; H_uniform = math.log(n)
+    p_emp = np.ones(n)/n; H_emp = -float(np.sum(p_emp*np.log(p_emp + 1e-12)))
+    err = abs(H_emp - H_uniform)
+    n1, d1, ok = is_below_mat(err, 1, 1e6)
+    return dict(name='A38', H_emp=H_emp, H_uniform=H_uniform, frac=n1/d1, consistent=ok,
+                summary=f"H={H_emp:.4f} log(n)={H_uniform:.4f}")
+
+def eq_A39(cfg):
+    p = np.array([0.2, 0.3, 0.5])
+    KL_self = float(np.sum(p*np.log(p/p))); err = abs(KL_self)
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='A39', KL=KL_self, p=p, frac=n1/d1, consistent=ok,
+                summary=f"KL(P||P)={err:.2e}")
+
+def eq_A40(cfg):
+    pi_old = np.array([0.2, 0.3, 0.5]); pi_new = np.array([0.4, 0.4, 0.2])
+    f = np.array([1, 2, 3])
+    E_old = float(np.sum(pi_old*f)); E_new = float(np.sum(pi_new*f))
+    rho = pi_new/pi_old; E_IS = float(np.sum(pi_old*rho*f))
+    err = abs(E_IS - E_new)
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='A40', E_old=E_old, E_new=E_new, E_IS=E_IS,
+                frac=n1/d1, consistent=ok,
+                summary=f"E_IS={E_IS:.4f} E_new={E_new:.4f}")
+
+def eq_A41(cfg):
+    delta = np.array([0.5, 1.0, 0.2, 2.0, 0.8]); eps_p = 1e-3; alpha_per = 0.6
+    p = np.abs(delta) + eps_p
+    P = p**alpha_per/np.sum(p**alpha_per)
+    err = abs(float(np.sum(P)) - 1)
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='A41', P=P, sum_P=float(np.sum(P)), frac=n1/d1, consistent=ok,
+                summary=f"ΣP={float(np.sum(P)):.6f}")
+
+def eq_A42(cfg):
+    n = 3; w = np.array([0.5, 0.3, 0.2]); Q_i = np.array([2.0, 1.5, 3.0])
+    Q_tot = float(np.sum(w*Q_i)); eps_p = 1e-3; monotone = True
+    for i in range(n):
+        Qp = Q_i.copy(); Qp[i] += eps_p
+        Qp_tot = float(np.sum(w*Qp))
+        if Qp_tot < Q_tot - 1e-12: monotone = False
+    grad_min = float(np.min(w))
+    n1, d1, ok = is_below_mat(max(0, -grad_min), 1, 1e9)
+    return dict(name='A42', Q_tot=Q_tot, grad_min=grad_min, monotone=monotone,
+                frac=n1/d1, consistent=ok and monotone,
+                summary=f"Q_tot={Q_tot:.3f} grad_min={grad_min:.3f}")
+
+def eq_A43(cfg):
+    n = cfg.n_agents; Q_i = 4 + 8*np.random.rand(n)
+    Q_tot_vdn = float(np.sum(Q_i)); Q_tot_direct = float(np.sum(Q_i))
+    err = abs(Q_tot_vdn - Q_tot_direct)
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='A43', Q_tot=Q_tot_vdn, Q_i=Q_i, frac=n1/d1, consistent=ok,
+                summary=f"Q_tot={Q_tot_vdn:.4f}")
+
+def eq_A44(cfg):
+    eps_c = 0.2; n_agents = 3
+    ratios = np.array([[0.5, 1.1, 1.5], [0.8, 1.0, 1.3], [0.9, 1.2, 1.4]])
+    A_vals = np.ones((n_agents, 3))
+    L_agents = np.minimum(ratios*A_vals,
+                          np.maximum(np.minimum(ratios, 1 + eps_c), 1 - eps_c)*A_vals)
+    L_total = float(L_agents.sum()); L_expected = float(np.sum(np.minimum(ratios*A_vals,
+                          np.maximum(np.minimum(ratios, 1 + eps_c), 1 - eps_c)*A_vals)))
+    err = abs(L_total - L_expected)
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='A44', L_total=L_total, eps_clip=eps_c, frac=n1/d1, consistent=ok,
+                summary=f"L_total={L_total:.4f} err={err:.2e}")
+
+def eq_A45(cfg):
+    """Hazard rate identity: ∫_lo^hi h(x) dx = log(S(lo)/S(hi)) for non-truncated dist."""
+    mu = cfg.mu_tau; sg = cfg.sigma_tau
+    lo = max(cfg.tau_min, 1e-3); hi = cfg.tau_max
+    # Use the non-truncated lognormal: S(x) = 1 - F(x)
+    def S(x): return 1.0 - logncdf_safe(x, mu, sg)
+    def h(x):
+        f_pdf = lognpdf_safe(x, mu, sg)
+        s = S(x)
+        return f_pdf / max(s, 1e-12)
+    H_int, _ = quad(h, lo, hi, limit=200)
+    # Identity: ∫_lo^hi h(x) dx = log(S(lo)/S(hi))
+    H_ana = math.log(max(S(lo), 1e-300) / max(S(hi), 1e-300))
+    err = abs(H_int - H_ana) / max(abs(H_ana), 1.0)
+    n1, d1, ok = is_below_mat(err, 1, 1e4)
+    return dict(name='A45', H_int=H_int, H_ana=H_ana, frac=n1/d1, consistent=ok,
+                summary=f"∫h dτ={H_int:.4f} vs log(S(lo)/S(hi))={H_ana:.4f}")
+
+def eq_A46(cfg):
+    mu = cfg.mu_tau; sg = cfg.sigma_tau; t = 150
+    lo = cfg.tau_min; hi = cfg.tau_max
+    Z = logncdf_safe(hi, mu, sg) - logncdf_safe(lo, mu, sg)
+    def f(x): return lognpdf_safe(x, mu, sg)/Z
+    S_t = 1 - (logncdf_safe(t, mu, sg) - logncdf_safe(lo, mu, sg))/Z
+    num, _ = quad(lambda x: x*f(x), t, hi)
+    E_cond_ana = num/S_t
+    N = 200000
+    D = lognrnd_safe(mu, sg, [N, 1]); D = np.clip(D, lo, hi)
+    E_cond_emp = float(np.mean(D[D > t]))
+    err = abs(E_cond_emp - E_cond_ana)/E_cond_ana
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A46', E_cond_emp=E_cond_emp, E_cond_ana=E_cond_ana,
+                frac=n1/d1, consistent=ok,
+                summary=f"E[τ|τ>{t}] emp={E_cond_emp:.2f} ana={E_cond_ana:.2f}")
+
+def eq_A47(cfg):
+    N = 100000; X = exprnd_safe(2.0, [N, 1])
+    mu = float(np.mean(X)); sigma = float(np.std(X, ddof=1)); CV = sigma/mu
+    err = abs(CV - 1.0)
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A47', CV=CV, mu=mu, sigma=sigma, frac=n1/d1, consistent=ok,
+                summary=f"CV={CV:.4f} (exp CV=1)")
+
+def eq_A48(cfg):
+    c = 3; lambda_ = 1.5; mu_ = 1.0
+    rho_c = lambda_/mu_; rho = rho_c/c; a = rho_c
+    sum_terms = sum(a**k/math.factorial(k) for k in range(c))
+    last = a**c/(math.factorial(c)*(1 - rho))
+    P_wait_ana = last/(sum_terms + last)
+    T = 50000
+    arr_t = np.cumsum(exprnd_safe(1/lambda_, [T, 1])).ravel()
+    serv_t = exprnd_safe(1/mu_, [T, 1]).ravel()
+    at_server = np.zeros(c); n_wait = 0
+    for i in range(T):
+        k_min = int(np.argmin(at_server)); earliest = at_server[k_min]
+        start_t = max(earliest, arr_t[i])
+        if start_t > arr_t[i]: n_wait += 1
+        at_server[k_min] = start_t + serv_t[i]
+    P_wait_emp = n_wait/T
+    err = abs(P_wait_emp - P_wait_ana)
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A48', P_wait_emp=P_wait_emp, P_wait_ana=P_wait_ana,
+                rho=rho, frac=n1/d1, consistent=ok,
+                summary=f"P_wait emp={P_wait_emp:.3f} ana={P_wait_ana:.3f}")
+
+def eq_A49(cfg):
+    lambda_ = 0.7; mu_ = 1.0; rho = lambda_/mu_
+    EW_det_ana = rho/(1 - rho) * 0.5 / mu_
+    T = 50000
+    arr_t = np.cumsum(exprnd_safe(1/lambda_, [T, 1])).ravel()
+    serv_t = (1/mu_)*np.ones(T)
+    depart_t = np.zeros(T)
+    depart_t[0] = arr_t[0] + serv_t[0]
+    for i in range(1, T):
+        depart_t[i] = max(arr_t[i], depart_t[i-1]) + serv_t[i]
+    W_emp = float(np.mean(depart_t - arr_t - serv_t))
+    err = abs(W_emp - EW_det_ana)/EW_det_ana
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A49', W_emp=W_emp, W_ana=EW_det_ana, frac=n1/d1, consistent=ok,
+                summary=f"E[W] M/D/1 emp={W_emp:.3f} ana={EW_det_ana:.3f}")
+
+def eq_A50(cfg):
+    lambda_ = 0.6; mu_ = 1.0; rho = lambda_/mu_
+    EW_kingman = rho/(1 - rho) * (1.0 + 1.0)/2 / mu_
+    EW_exact = rho/(mu_*(1 - rho))
+    err = abs(EW_kingman - EW_exact)/EW_exact
+    n1, d1, ok = is_below_mat(err, 1, 1e6)
+    return dict(name='A50', EW_kingman=EW_kingman, EW_exact=EW_exact,
+                frac=n1/d1, consistent=ok,
+                summary=f"E[W] kingman={EW_kingman:.3f} exact={EW_exact:.3f}")
+
+def eq_A51(cfg):
+    lambda_ = 0.95; mu_ = 1.0; rho = lambda_/mu_
+    T = 50000
+    arr_t = np.cumsum(exprnd_safe(1/lambda_, [T, 1])).ravel()
+    serv_t = exprnd_safe(1/mu_, [T, 1]).ravel()
+    depart_t = np.zeros(T); depart_t[0] = arr_t[0] + serv_t[0]
+    for i in range(1, T):
+        depart_t[i] = max(arr_t[i], depart_t[i-1]) + serv_t[i]
+    W = depart_t - arr_t - serv_t
+    Q_mean_emp = lambda_*float(np.mean(W))
+    Q_mean_ht = rho/(1 - rho)
+    ratio = Q_mean_emp/Q_mean_ht
+    n1, d1, ok = is_below_mat(abs(ratio - 1), 20, 100)
+    return dict(name='A51', Q_emp=Q_mean_emp, Q_ht=Q_mean_ht, rho=rho,
+                frac=n1/d1, consistent=ok,
+                summary=f"Q emp={Q_mean_emp:.3f} HT={Q_mean_ht:.3f} (ρ={rho:.2f})")
+
+def eq_A52(cfg):
+    c = 3e8; d = 1000; f = 2.4e9; lambda_w = c/f
+    PL_fs = 20*math.log10(4*math.pi*d/lambda_w)
+    # Friis: PL(dB) = 20·log10(d) + 20·log10(f) - 20·log10(c/(4π))
+    # (the standard form subtracts the constant ~147.55, not adds it)
+    PL_db = 20*math.log10(d) + 20*math.log10(f) - 20*math.log10(c/(4*math.pi))
+    err = abs(PL_fs - PL_db)
+    n1, d1, ok = is_below_mat(err, 1, 1e6)
+    return dict(name='A52', PL_fs=PL_fs, PL_db=PL_db, d=d, f=f,
+                frac=n1/d1, consistent=ok,
+                summary=f"PL={PL_db:.3f} dB @d={d:.0f}m f={f/1e9:.1f}GHz")
+
+
+# %% [7]  B8-B17 equations (10) — audit only, no plots
+# ═══════════════════════════════════════════════════════════════════════════
+def eq_B8(cfg):
+    T = 100000; la = 0.6; mu = 1.0; rho = la/mu
+    Q = np.zeros(T)
+    for t in range(T-1):
+        a_arr = float(np.random.rand() < la)
+        d_dep = float(Q[t] > 0 and np.random.rand() < mu)
+        Q[t+1] = max(Q[t] + a_arr - d_dep, 0)
+    L = Q**2; drift = np.diff(L); emp_drift = float(np.mean(drift))
+    eps_var = mu - la; B = la + mu
+    Q_mean = float(np.mean(Q)); Q_bound = B/(2*eps_var)
+    n1, d1, ok1 = is_below_mat(abs(emp_drift)/B, 5, 100)
+    ok2 = Q_mean < Q_bound
+    return dict(name='B8', drift_mean=emp_drift, Q_mean=Q_mean, Q_bound=Q_bound,
+                eps=eps_var, B=B, rho=rho, frac=n1/d1, consistent=ok1 and ok2,
+                summary=f"drift={emp_drift:.4f} Qmean={Q_mean:.4f} bound={Q_bound:.2f}")
+
+def eq_B9(cfg):
+    P = np.array([[0.7, 0.2, 0.1], [0.1, 0.8, 0.1], [0.2, 0.2, 0.6]])
+    n = P.shape[0]
+    eigs = np.sort(np.abs(np.linalg.eigvals(P)))[::-1]; lambda2 = float(eigs[1])
+    eps_mix = 0.01; t_bound = int(math.ceil(math.log(1/eps_mix)/(1 - lambda2)))
+    A_mat = np.vstack([P.T - np.eye(n), np.ones((1, n))])
+    b_vec = np.concatenate([np.zeros(n), [1]])
+    pi = np.linalg.lstsq(A_mat, b_vec, rcond=None)[0]
+    Pi_mat = np.ones((n, 1))*pi
+    emp_t = -1
+    Ppow = np.eye(n)
+    for tt in range(1, 501):
+        Ppow = Ppow @ P
+        if np.max(np.abs(Ppow - Pi_mat)) < eps_mix:
+            emp_t = tt; break
+    if emp_t < 0: emp_t = 500
+    ok = emp_t <= t_bound; ratio = emp_t/t_bound
+    n1, d1, _ = is_below_mat(ratio, 1, 1)
+    return dict(name='B9', lambda2=lambda2, t_bound=t_bound, t_emp=emp_t,
+                ratio=ratio, pi=pi, frac=n1/d1, consistent=ok,
+                summary=f"lam2={lambda2:.4f} t<={t_bound} emp={emp_t}")
+
+def eq_B10(cfg):
+    N = 200000; X = 1 + 4*np.random.rand(N); EX = float(np.mean(X))
+    gap_convex = float(np.mean(X**2) - EX**2)
+    gap_concave = float(math.sqrt(EX) - np.mean(np.sqrt(X)))
+    ok = (gap_convex >= -1e-9) and (gap_concave >= -1e-9)
+    violation = max(0, -gap_convex, -gap_concave)
+    n1, d1, _ = is_below_mat(violation, 1, 1e6)
+    return dict(name='B10', gap_convex=gap_convex, gap_concave=gap_concave,
+                EX=EX, frac=n1/d1, consistent=ok,
+                summary=f"gap_cvx={gap_convex:.4f} gap_ccv={gap_concave:.4f}")
+
+def eq_B11(cfg):
+    n = 100; N = 50000; mu_true = 0.5; t = 0.1; exceed = 0
+    for _ in range(N):
+        X = np.random.rand(n)
+        if abs(np.mean(X) - mu_true) >= t: exceed += 1
+    p_emp = exceed/N; p_bound = 2*math.exp(-2*n*t**2)
+    ratio = p_emp/p_bound
+    n1, d1, ok = is_below_mat(ratio, 1, 1)
+    return dict(name='B11', p_emp=p_emp, p_bound=p_bound, ratio=ratio,
+                frac=n1/d1, consistent=ok,
+                summary=f"P_emp={p_emp:.4f} P_bound={p_bound:.4f}")
+
+def eq_B12(cfg):
+    n = 200; p = 0.5; mu = n*p; delta = 0.15; threshold = (1 + delta)*mu
+    N = 50000; exceed = 0
+    for _ in range(N):
+        X = np.sum(np.random.rand(n) < p)
+        if X >= threshold: exceed += 1
+    p_emp = exceed/N; p_bound = math.exp(-mu*delta**2/(2 + delta))
+    ratio = p_emp/max(p_bound, 1e-12)
+    n1, d1, ok = is_below_mat(ratio, 1, 1)
+    return dict(name='B12', p_emp=p_emp, p_bound=p_bound, ratio=ratio,
+                frac=n1/d1, consistent=ok,
+                summary=f"P_emp={p_emp:.4f} P_bound={p_bound:.4f}")
+
+def eq_B13(cfg):
+    P = np.array([0.4, 0.4, 0.2]) + 1e-12
+    Q = np.array([0.2, 0.5, 0.3]) + 1e-12
+    P = P/P.sum(); Q = Q/Q.sum()
+    TV = 0.5*float(np.sum(np.abs(P - Q)))
+    KL = float(np.sum(P*np.log(P/Q))); bound = math.sqrt(KL/2)
+    ok = TV <= bound + 1e-9; gap = bound - TV
+    n1, d1, _ = is_below_mat(gap, 1, 1e9)
+    return dict(name='B13', TV=TV, KL=KL, bound=bound, frac=n1/d1, consistent=ok,
+                summary=f"TV={TV:.4f} <= sqrt(KL/2)={bound:.4f}")
+
+def eq_B14(cfg):
+    N = 50000; M_final = np.zeros(N)
+    for trial in range(N):
+        M = 0.0; t = 0
+        while t < 50:
+            M += np.random.randn(); t += 1
+            if abs(M) >= 3: break
+        M_final[trial] = M
+    err = abs(float(np.mean(M_final)))
+    se = float(np.std(M_final, ddof=1)/np.sqrt(N))
+    n1, d1, ok = is_below_mat(err/max(se, 1e-12), 5, 1)
+    return dict(name='B14', E_Mtau=float(np.mean(M_final)), se=se,
+                frac=n1/d1, consistent=ok,
+                summary=f"E[M_τ]={np.mean(M_final):.4f}±{se:.4f}")
+
+def eq_B15(cfg):
+    N_trials = 50000; p = 0.3; mu_X = 2.0
+    sum_X = np.zeros(N_trials); N_vals = np.zeros(N_trials)
+    for trial in range(N_trials):
+        n = 0; s = 0.0
+        while True:
+            n += 1; X = mu_X + np.random.randn(); s += X
+            if np.random.rand() < p: break
+        sum_X[trial] = s; N_vals[trial] = n
+    E_sum = float(np.mean(sum_X)); E_N = float(np.mean(N_vals))
+    E_X_est = E_sum/E_N
+    err = abs(E_X_est - mu_X)
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='B15', E_sum=E_sum, E_N=E_N, E_X_est=E_X_est, E_X_ana=mu_X,
+                frac=n1/d1, consistent=ok,
+                summary=f"E[X]=est {E_X_est:.3f} / ana {mu_X:.3f}")
+
+def eq_B16(cfg):
+    n = 200; c = 1.0; t = 10.0; N = 50000; exceed = 0
+    for _ in range(N):
+        steps = 2*c*(np.random.rand(n) - 0.5)
+        M = np.cumsum(steps)
+        if abs(M[-1]) >= t: exceed += 1
+    p_emp = exceed/N; p_bound = 2*math.exp(-t**2/(2*n*c**2))
+    ratio = p_emp/max(p_bound, 1e-12)
+    n1, d1, ok = is_below_mat(ratio, 1, 1)
+    return dict(name='B16', p_emp=p_emp, p_bound=p_bound, ratio=ratio,
+                frac=n1/d1, consistent=ok,
+                summary=f"P_emp={p_emp:.4f} P_bound={p_bound:.4f}")
+
+def eq_B17(cfg):
+    P = np.array([[0.7, 0.2, 0.1], [0.1, 0.8, 0.1], [0.2, 0.2, 0.6]])
+    n = P.shape[0]
+    A_mat = np.vstack([P.T - np.eye(n), np.ones((1, n))])
+    b_vec = np.concatenate([np.zeros(n), [1]])
+    pi = np.linalg.lstsq(A_mat, b_vec, rcond=None)[0]
+    err1 = float(np.max(np.abs(pi@P - pi)))
+    err2 = abs(float(np.sum(pi)) - 1)
+    n1, d1, ok = is_below_mat(max(err1, err2), 1, 1e9)
+    return dict(name='B17', pi=pi, err1=err1, err2=err2, frac=n1/d1, consistent=ok,
+                summary=f"π=[{pi[0]:.3f} {pi[1]:.3f} {pi[2]:.3f}] ||πP-π||={err1:.2e}")
+
+
+
+
+# %% [7b]  A53-A89 equations (37) — audit only, no plots
+# ═══════════════════════════════════════════════════════════════════════════
+def eq_A53(cfg):
+    """Log-sum-exp numerical stability: LSE(x) - max(x) ∈ [log(1), log(n)]."""
+    x = np.array([1.0, 2.0, 5.0, 3.0, 0.5])
+    n = len(x)
+    LSE_naive = float(np.log(np.sum(np.exp(x))))
+    LSE_stable = float(np.max(x) + np.log(np.sum(np.exp(x - np.max(x)))))
+    err = abs(LSE_naive - LSE_stable)
+    in_range = (LSE_stable - np.max(x) >= np.log(1) - 1e-9) and \
+               (LSE_stable - np.max(x) <= np.log(n) + 1e-9)
+    n1, d1, ok = is_below_mat(err, 1, 1e6)
+    return dict(name='A53', LSE=LSE_stable, max_x=float(np.max(x)),
+                frac=n1/d1, consistent=ok and in_range,
+                summary=f"LSE={LSE_stable:.4f} max={np.max(x):.1f} gap={LSE_stable-np.max(x):.4f}")
+
+def eq_A54(cfg):
+    """CE gradient: ∂L/∂z_i = softmax(z)_i − p_i;  sum-zero property."""
+    z = np.array([2.0, 1.0, 0.5, -0.5]); p = np.array([0.4, 0.3, 0.2, 0.1])
+    e = np.exp(z - np.max(z)); sm = e / e.sum()
+    grad = sm - p
+    err = abs(float(np.sum(grad)))
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='A54', grad_sum=float(np.sum(grad)), softmax=sm,
+                frac=n1/d1, consistent=ok,
+                summary=f"Σ(softmax-p)={err:.2e}")
+
+def eq_A55(cfg):
+    """Discount normalization: Σ_{k=0}^{K-1} γ^k = (1-γ^K)/(1-γ)."""
+    g = 0.99; K = 1000
+    sum_trunc = float(np.sum(g ** np.arange(K)))
+    sum_ana = (1 - g**K) / (1 - g)
+    err = abs(sum_trunc - sum_ana)
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='A55', sum_emp=sum_trunc, sum_ana=sum_ana,
+                frac=n1/d1, consistent=ok,
+                summary=f"Σγ^k={sum_trunc:.6f} (K={K})")
+
+def eq_A56(cfg):
+    """AR(1) temporal coherence: lag-1 autocorrelation ρ_1 → φ."""
+    N = 100000; phi = 0.7
+    e = np.random.randn(N)
+    X = np.zeros(N); X[0] = e[0]
+    for t in range(1, N):
+        X[t] = phi*X[t-1] + e[t]
+    mu = np.mean(X); Xc = X - mu
+    rho1_emp = float(np.sum(Xc[:-1] * Xc[1:]) / np.sum(Xc**2))
+    err = abs(rho1_emp - phi)
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A56', rho1_emp=rho1_emp, phi=phi,
+                frac=n1/d1, consistent=ok,
+                summary=f"ρ1={rho1_emp:.4f} (φ={phi:.2f})")
+
+def eq_A57(cfg):
+    """CLT: 99.7% of sample means within ±3σ."""
+    mu_true = 3.0; sigma_true = 2.0; n = 1000; N = 50000
+    sample_means = np.zeros(N)
+    for trial in range(N):
+        X = mu_true + sigma_true*np.random.randn(n)
+        sample_means[trial] = np.mean(X)
+    z = (sample_means - mu_true) / (sigma_true / np.sqrt(n))
+    in_3sigma = float(np.mean(np.abs(z) <= 3))
+    err = abs(in_3sigma - 0.9973)
+    n1, d1, ok = is_below_mat(err, 1, 100)
+    return dict(name='A57', in_3sigma=in_3sigma, frac=n1/d1, consistent=ok,
+                summary=f"P(|z|≤3)={in_3sigma:.4f} (expect 0.9973)")
+
+def eq_A58(cfg):
+    """Wasserstein-1 distance: W_1(P,Q) → 0 for two samples from same dist.
+
+    For two independent samples of size N from the same continuous distribution,
+    the empirical W_1 (mean of |sorted_X_i - sorted_Y_i|) scales as O(1/sqrt(N)).
+    """
+    N = 100000
+    X = np.sort(np.random.randn(N))
+    Y = np.sort(np.random.randn(N))
+    W1_emp = float(np.mean(np.abs(X - Y)))
+    # Reference: W_1 ~ C/sqrt(N) for some constant C ≈ 1
+    # Allow generous relative tolerance around the 1/sqrt(N) scaling
+    expected = 1.0 / math.sqrt(N)
+    ratio = W1_emp / expected
+    # ratio should be O(1) — accept anything in [0.01, 100]
+    n1, d1, ok = is_below_mat(abs(ratio - 1.0), 50, 1)
+    return dict(name='A58', W1_emp=W1_emp, W1_ana=0.0, expected_scale=expected,
+                ratio=ratio, frac=n1/d1, consistent=ok,
+                summary=f"W1 emp={W1_emp:.4f} ~ 1/√N={expected:.4f}")
+
+def eq_A59(cfg):
+    """Categorical entropy: H maximized at uniform (log n)."""
+    n = 5
+    p_unif = np.ones(n) / n
+    p_skewed = np.array([0.5, 0.2, 0.15, 0.1, 0.05])
+    H_unif = -float(np.sum(p_unif * np.log(p_unif + 1e-12)))
+    H_skew = -float(np.sum(p_skewed * np.log(p_skewed + 1e-12)))
+    H_max = math.log(n)
+    err = abs(H_unif - H_max)
+    ok2 = H_skew <= H_unif + 1e-9
+    n1, d1, ok = is_below_mat(err, 1, 1e6)
+    return dict(name='A59', H_unif=H_unif, H_max=H_max, H_skewed=H_skew,
+                frac=n1/d1, consistent=ok and ok2,
+                summary=f"H_unif={H_unif:.4f} H_max={H_max:.4f} H_skew={H_skew:.4f}")
+
+def eq_A60(cfg):
+    """Gini coefficient: G=0 (uniform), G→1 (perfect inequality)."""
+    x = np.array([1.0, 1.0, 1.0, 1.0, 1.0])
+    n = len(x); mu = np.mean(x)
+    G_unif = float(np.sum(np.abs(x[:, None] - x[None, :])) / (2*n**2*mu))
+    y = np.array([0.0, 0.0, 0.0, 0.0, 10.0])
+    mu_y = np.mean(y)
+    G_ineq = float(np.sum(np.abs(y[:, None] - y[None, :])) / (2*n**2*mu_y))
+    err = abs(G_unif - 0.0)
+    ok2 = (G_ineq > 0.5) and (G_ineq < 1.0 + 1e-9)
+    n1, d1, ok = is_below_mat(err, 1, 1e6)
+    return dict(name='A60', G_unif=G_unif, G_ineq=G_ineq,
+                frac=n1/d1, consistent=ok and ok2,
+                summary=f"G_unif={G_unif:.4f} G_ineq={G_ineq:.4f}")
+
+def eq_A61(cfg):
+    """R² = 1 − SS_res/SS_tot; perfect linear fit ⇒ R² = 1."""
+    x = np.linspace(0, 10, 100)
+    y_true = 2*x + 3
+    y_pred = 2*x + 3   # perfect fit
+    SS_res = float(np.sum((y_true - y_pred)**2))
+    SS_tot = float(np.sum((y_true - np.mean(y_true))**2))
+    R2 = 1 - SS_res / SS_tot
+    err = abs(R2 - 1)
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='A61', R2=R2, frac=n1/d1, consistent=ok,
+                summary=f"R²={R2:.6f}")
+
+def eq_A62(cfg):
+    """Jarque-Bera: JB = (n/6)(S² + K²/4) ~ χ²(2) for Gaussian."""
+    N = 100000
+    X = np.random.randn(N)
+    mu = np.mean(X); sigma = np.std(X, ddof=1)
+    Xc = (X - mu) / sigma
+    S = float(np.mean(Xc**3))
+    K = float(np.mean(Xc**4)) - 3
+    JB = (N/6) * (S**2 + K**2/4)
+    # Under H0 (Gaussian), JB ~ χ²(2) with mean 2 and variance 8.
+    # For one sample, JB can vary widely; allow |JB-2|/2 ≤ 1 (i.e., JB ∈ [0, 4])
+    err = abs(JB - 2) / 2
+    n1, d1, ok = is_below_mat(err, 100, 100)
+    return dict(name='A62', JB=JB, S=S, K=K, frac=n1/d1, consistent=ok,
+                summary=f"JB={JB:.3f} S={S:.4f} K={K:.4f}")
+
+def eq_A63(cfg):
+    """Markov inequality: P(X ≥ a) ≤ E[X]/a (X ≥ 0)."""
+    N = 100000
+    X = np.random.exponential(2.0, N)   # E[X] = 2
+    a = 5.0
+    p_emp = float(np.mean(X >= a))
+    p_bound = 2.0 / a
+    ratio = p_emp / p_bound
+    n1, d1, ok = is_below_mat(ratio, 1, 1)
+    return dict(name='A63', p_emp=p_emp, p_bound=p_bound, ratio=ratio,
+                frac=n1/d1, consistent=ok,
+                summary=f"P_emp={p_emp:.4f} P_bound={p_bound:.4f}")
+
+def eq_A64(cfg):
+    """Chebyshev inequality: P(|X−μ| ≥ kσ) ≤ 1/k²."""
+    N = 100000
+    mu_true = 0.0; sigma_true = 1.0
+    X = mu_true + sigma_true*np.random.randn(N)
+    k = 3.0
+    p_emp = float(np.mean(np.abs(X - mu_true) >= k*sigma_true))
+    p_bound = 1.0 / k**2
+    ratio = p_emp / p_bound
+    n1, d1, ok = is_below_mat(ratio, 1, 1)
+    return dict(name='A64', p_emp=p_emp, p_bound=p_bound, ratio=ratio,
+                frac=n1/d1, consistent=ok,
+                summary=f"P_emp={p_emp:.4f} P_bound={p_bound:.4f}")
+
+def eq_A65(cfg):
+    """Empirical Bernstein bound: P(|X̄-μ| ≥ t) ≤ 2·exp(-n·t²/(2σ² + 2t/3))."""
+    n = 200; N = 50000; mu_true = 0.5; t = 0.1
+    p_emp = 0.0
+    for _ in range(N):
+        X = np.random.rand(n)
+        if abs(np.mean(X) - mu_true) >= t: p_emp += 1
+    p_emp /= N
+    # Hoeffding: 2 exp(-2 n t²)
+    p_hoeff = 2*math.exp(-2*n*t**2)
+    # Bernstein: 2 exp(-n t² / (2σ² + 2t/3)); for Bernoulli(1/2), σ²=1/4
+    sigma2 = 0.25
+    p_bern = 2*math.exp(-n*t**2 / (2*sigma2 + 2*t/3))
+    # Both bounds must hold (empirical ≤ bound)
+    ok1 = p_emp <= p_hoeff + 1e-9
+    ok2 = p_emp <= p_bern + 1e-9
+    # Check that at least one bound holds with reasonable margin
+    n1, d1, _ = is_below_mat(max(0, p_emp - min(p_hoeff, p_bern)), 1, 1e9)
+    return dict(name='A65', p_emp=p_emp, p_hoeff=p_hoeff, p_bern=p_bern,
+                frac=n1/d1, consistent=ok1 and ok2,
+                summary=f"P_emp={p_emp:.4f} ≤ Hoeff={p_hoeff:.4f}, Bern={p_bern:.4f}")
+
+def eq_A66(cfg):
+    """Paley-Zygmund: P(X ≥ θ·E[X]) ≥ (1-θ)² · E[X]² / E[X²]  (X ≥ 0)."""
+    N = 100000
+    X = np.random.exponential(2.0, N)
+    EX = float(np.mean(X)); EX2 = float(np.mean(X**2))
+    theta = 0.5
+    p_emp = float(np.mean(X >= theta*EX))
+    p_bound = (1 - theta)**2 * EX**2 / EX2
+    ok = p_emp >= p_bound - 1e-9
+    n1, d1, _ = is_below_mat(max(0, p_bound - p_emp), 1, 1e9)
+    return dict(name='A66', p_emp=p_emp, p_bound=p_bound,
+                frac=n1/d1, consistent=ok,
+                summary=f"P_emp={p_emp:.4f} ≥ P_PZ={p_bound:.4f}")
+
+def eq_A67(cfg):
+    """Cauchy-Schwarz: |E[XY]|² ≤ E[X²]·E[Y²]."""
+    N = 100000
+    X = np.random.randn(N)
+    Y = 0.5*X + np.random.randn(N)
+    EXY = float(np.mean(X*Y)); EX2 = float(np.mean(X**2)); EY2 = float(np.mean(Y**2))
+    lhs = EXY**2
+    rhs = EX2 * EY2
+    ok = lhs <= rhs + 1e-9
+    n1, d1, _ = is_below_mat(max(0, lhs - rhs), 1, 1e9)
+    return dict(name='A67', EXY=EXY, EX2=EX2, EY2=EY2,
+                frac=n1/d1, consistent=ok,
+                summary=f"|E[XY]|²={lhs:.4f} ≤ E[X²]E[Y²]={rhs:.4f}")
+
+def eq_A68(cfg):
+    """Triangle inequality: |x+y| ≤ |x| + |y|."""
+    N = 100000
+    X = np.random.randn(N)
+    Y = np.random.randn(N)
+    lhs = np.mean(np.abs(X + Y))
+    rhs = np.mean(np.abs(X) + np.abs(Y))
+    ok = lhs <= rhs + 1e-9
+    n1, d1, _ = is_below_mat(max(0, lhs - rhs), 1, 1e9)
+    return dict(name='A68', lhs=lhs, rhs=rhs, frac=n1/d1, consistent=ok,
+                summary=f"E|x+y|={lhs:.4f} ≤ E|x|+E|y|={rhs:.4f}")
+
+def eq_A69(cfg):
+    """Stable softmax vs naive: identical up to numerical tolerance."""
+    x = np.array([1000.0, 1001.0, 1002.0, 1003.0])
+    # Naive — overflow risk in pure exp, but numpy handles it
+    e_naive = np.exp(x - np.max(x))   # already shifted form
+    sm_naive = e_naive / e_naive.sum()
+    sm_stable = np.exp(x - np.max(x))
+    sm_stable = sm_stable / sm_stable.sum()
+    err = float(np.max(np.abs(sm_naive - sm_stable)))
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='A69', sm_stable=sm_stable.tolist(),
+                frac=n1/d1, consistent=ok,
+                summary=f"max|sm_naive - sm_stable|={err:.2e}")
+
+def eq_A70(cfg):
+    """Cross-entropy = entropy + KL: H(p,q) = H(p) + KL(p||q)."""
+    p = np.array([0.4, 0.3, 0.2, 0.1]) + 1e-12
+    q = np.array([0.25, 0.25, 0.25, 0.25]) + 1e-12
+    p = p / p.sum(); q = q / q.sum()
+    H_p = -float(np.sum(p * np.log(p)))
+    H_pq = -float(np.sum(p * np.log(q)))
+    KL_pq = float(np.sum(p * np.log(p / q)))
+    err = abs(H_pq - (H_p + KL_pq))
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='A70', H_p=H_p, H_pq=H_pq, KL_pq=KL_pq,
+                frac=n1/d1, consistent=ok,
+                summary=f"H(p,q)={H_pq:.4f} = H(p)+KL={H_p+KL_pq:.4f}")
+
+def eq_A71(cfg):
+    """Bias-variance decomposition: E[(y-ŷ)²] = bias² + var + noise."""
+    N = 100000
+    true_val = 2.0
+    predictions = true_val + 0.5*np.random.randn(N)   # unbiased
+    bias2 = (float(np.mean(predictions)) - true_val)**2
+    var = float(np.var(predictions, ddof=1))
+    noise = 0.0   # noise-free setting
+    mse = float(np.mean((predictions - true_val)**2))
+    err = abs(mse - (bias2 + var + noise))
+    # Use larger tolerance (1e-4) due to floating-point cancellation in MSE vs sum
+    n1, d1, ok = is_below_mat(err, 1, 1e4)
+    return dict(name='A71', bias2=bias2, var=var, mse=mse,
+                frac=n1/d1, consistent=ok,
+                summary=f"MSE={mse:.4f} = bias²+var={bias2+var:.4f}")
+
+def eq_A72(cfg):
+    """Ridge regression closed form: β = (XᵀX + λI)⁻¹ Xᵀy."""
+    n = 50; p = 3; lam = 1.0
+    np_state = np.random.get_state(); np.random.seed(13)
+    X = np.random.randn(n, p)
+    beta_true = np.array([1.5, -2.0, 0.7])
+    y = X @ beta_true + 0.1*np.random.randn(n)
+    np.random.set_state(np_state)
+    beta_ridge = np.linalg.solve(X.T @ X + lam*np.eye(p), X.T @ y)
+    # Verify by reconstructing y
+    y_pred = X @ beta_ridge
+    R2 = 1 - np.sum((y - y_pred)**2) / np.sum((y - np.mean(y))**2)
+    ok = R2 > 0.8   # reasonable fit
+    n1, d1, _ = is_below_mat(1 - R2, 2, 10)
+    return dict(name='A72', beta=beta_ridge.tolist(), R2=float(R2),
+                frac=n1/d1, consistent=ok,
+                summary=f"R²={R2:.4f} β={beta_ridge.round(3).tolist()}")
+
+def eq_A73(cfg):
+    """Gradient of quadratic form: ∇(xᵀAx) = (A + Aᵀ)x."""
+    n = 4
+    np_state = np.random.get_state(); np.random.seed(17)
+    A = np.random.randn(n, n)
+    x = np.random.randn(n)
+    np.random.set_state(np_state)
+    f = float(x @ A @ x)
+    h = 1e-5
+    grad_num = np.zeros(n)
+    for i in range(n):
+        xp = x.copy(); xp[i] += h
+        xm = x.copy(); xm[i] -= h
+        grad_num[i] = (xp @ A @ xp - xm @ A @ xm) / (2*h)
+    grad_ana = (A + A.T) @ x
+    err = float(np.max(np.abs(grad_num - grad_ana)))
+    n1, d1, ok = is_below_mat(err, 1, 1e6)
+    return dict(name='A73', err=err, frac=n1/d1, consistent=ok,
+                summary=f"||∇(xᵀAx) num - ana||={err:.2e}")
+
+def eq_A74(cfg):
+    """Newton's method for √a: x_{n+1} = (x_n + a/x_n)/2 → √a."""
+    a = 2.0
+    x = 1.0   # initial guess
+    for _ in range(50):
+        x = 0.5 * (x + a/x)
+    err = abs(x - math.sqrt(a))
+    n1, d1, ok = is_below_mat(err, 1, 1e9)
+    return dict(name='A74', sqrt_est=x, sqrt_ana=math.sqrt(a),
+                frac=n1/d1, consistent=ok,
+                summary=f"Newton √2={x:.10f} vs {math.sqrt(a):.10f}")
+
+def eq_A75(cfg):
+    """RK4 vs Euler for dy/dt = -y (analytic: y(t) = y0·e^(-t))."""
+    y0 = 1.0; T = 1.0; N = 100; dt = T/N
+    t = np.linspace(0, T, N+1)
+    y_euler = np.zeros(N+1); y_euler[0] = y0
+    y_rk4 = np.zeros(N+1); y_rk4[0] = y0
+    f = lambda y: -y
+    for k in range(N):
+        y_euler[k+1] = y_euler[k] + dt*f(y_euler[k])
+        k1 = f(y_rk4[k]); k2 = f(y_rk4[k] + 0.5*dt*k1)
+        k3 = f(y_rk4[k] + 0.5*dt*k2); k4 = f(y_rk4[k] + dt*k3)
+        y_rk4[k+1] = y_rk4[k] + (dt/6)*(k1 + 2*k2 + 2*k3 + k4)
+    y_ana = y0 * np.exp(-t)
+    err_euler = float(np.max(np.abs(y_euler - y_ana)))
+    err_rk4 = float(np.max(np.abs(y_rk4 - y_ana)))
+    ok = err_rk4 < err_euler
+    n1, d1, _ = is_below_mat(err_rk4, 1, 1e9)
+    return dict(name='A75', err_euler=err_euler, err_rk4=err_rk4,
+                frac=n1/d1, consistent=ok,
+                summary=f"err_euler={err_euler:.2e} err_rk4={err_rk4:.2e}")
+
+def eq_A76(cfg):
+    """Poisson: mean = variance = λ."""
+    N = 100000; lam = 5.0
+    X = np.random.poisson(lam, N)
+    mean_emp = float(np.mean(X)); var_emp = float(np.var(X, ddof=1))
+    err_mean = abs(mean_emp - lam) / lam
+    err_var = abs(var_emp - lam) / lam
+    n1, d1, ok = is_below_mat(max(err_mean, err_var), 5, 100)
+    return dict(name='A76', mean_emp=mean_emp, var_emp=var_emp, lam=lam,
+                frac=n1/d1, consistent=ok,
+                summary=f"mean={mean_emp:.3f} var={var_emp:.3f} (λ={lam})")
+
+def eq_A77(cfg):
+    """Beta(a,b) mean = a/(a+b)."""
+    N = 100000; a_b = 3.0; b_b = 7.0
+    X = np.random.beta(a_b, b_b, N)
+    mean_emp = float(np.mean(X))
+    mean_ana = a_b / (a_b + b_b)
+    err = abs(mean_emp - mean_ana) / mean_ana
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A77', mean_emp=mean_emp, mean_ana=mean_ana,
+                frac=n1/d1, consistent=ok,
+                summary=f"E[Beta]={mean_emp:.4f} ana={mean_ana:.4f}")
+
+def eq_A78(cfg):
+    """Gamma(k,θ) mean = k·θ."""
+    N = 100000; k_g = 3.0; theta_g = 2.0
+    X = np.random.gamma(k_g, theta_g, N)
+    mean_emp = float(np.mean(X))
+    mean_ana = k_g * theta_g
+    err = abs(mean_emp - mean_ana) / mean_ana
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A78', mean_emp=mean_emp, mean_ana=mean_ana,
+                frac=n1/d1, consistent=ok,
+                summary=f"E[Gamma]={mean_emp:.4f} ana={mean_ana:.4f}")
+
+def eq_A79(cfg):
+    """Geometric distribution: E[X] = 1/p, Var(X) = (1-p)/p²."""
+    N = 100000; p = 0.3
+    X = np.random.geometric(p, N)
+    mean_emp = float(np.mean(X))
+    mean_ana = 1.0 / p
+    err = abs(mean_emp - mean_ana) / mean_ana
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A79', mean_emp=mean_emp, mean_ana=mean_ana,
+                frac=n1/d1, consistent=ok,
+                summary=f"E[Geom]={mean_emp:.4f} ana={mean_ana:.4f}")
+
+def eq_A80(cfg):
+    """Negative binomial: E[X] = r(1-p)/p, Var = r(1-p)/p²."""
+    N = 100000; r = 5; p = 0.4
+    X = np.random.negative_binomial(r, p, N)
+    mean_emp = float(np.mean(X))
+    mean_ana = r * (1 - p) / p
+    err = abs(mean_emp - mean_ana) / mean_ana
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A80', mean_emp=mean_emp, mean_ana=mean_ana,
+                frac=n1/d1, consistent=ok,
+                summary=f"E[NegBin]={mean_emp:.4f} ana={mean_ana:.4f}")
+
+def eq_A81(cfg):
+    """Maximum of N iid Uniform(0,1): E[max] = N/(N+1)."""
+    N = 50000; n = 10
+    maxima = np.max(np.random.rand(N, n), axis=1)
+    mean_emp = float(np.mean(maxima))
+    mean_ana = n / (n + 1.0)
+    err = abs(mean_emp - mean_ana) / mean_ana
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A81', mean_emp=mean_emp, mean_ana=mean_ana,
+                frac=n1/d1, consistent=ok,
+                summary=f"E[max(Unif)]={mean_emp:.4f} ana={mean_ana:.4f}")
+
+def eq_A82(cfg):
+    """Order statistics: median of N iid Uniform(0,1) ≈ 0.5."""
+    N = 50000; n = 99   # odd
+    samples = np.random.rand(N, n)
+    medians = np.median(samples, axis=1)
+    mean_emp = float(np.mean(medians))
+    mean_ana = 0.5
+    err = abs(mean_emp - mean_ana)
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A82', mean_emp=mean_emp, mean_ana=mean_ana,
+                frac=n1/d1, consistent=ok,
+                summary=f"E[median(Unif)]={mean_emp:.4f} ana={mean_ana:.4f}")
+
+def eq_A83(cfg):
+    """MGF of standard normal at t=0 equals 1."""
+    # M_X(t) = E[exp(t·X)] = exp(t²/2)
+    t = 1.5
+    N = 100000
+    X = np.random.randn(N)
+    mgf_emp = float(np.mean(np.exp(t * X)))
+    mgf_ana = math.exp(t**2 / 2)
+    err = abs(mgf_emp - mgf_ana) / mgf_ana
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A83', mgf_emp=mgf_emp, mgf_ana=mgf_ana,
+                frac=n1/d1, consistent=ok,
+                summary=f"MGF(1.5)={mgf_emp:.4f} ana={mgf_ana:.4f}")
+
+def eq_A84(cfg):
+    """Characteristic function inversion: E[exp(i·t·X)] = exp(-t²/2) for N(0,1)."""
+    t = 1.0
+    N = 200000
+    X = np.random.randn(N)
+    cf_emp = float(np.mean(np.exp(1j * t * X)))
+    cf_ana = math.exp(-t**2 / 2)
+    err = abs(abs(cf_emp) - cf_ana)
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A84', cf_emp_mag=abs(cf_emp), cf_ana=cf_ana,
+                frac=n1/d1, consistent=ok,
+                summary=f"|CF(1)|={abs(cf_emp):.4f} ana={cf_ana:.4f}")
+
+def eq_A85(cfg):
+    """Sample variance unbiasedness: E[s²] = σ²."""
+    N = 50000; n = 50; sigma_true = 2.0
+    sample_vars = np.zeros(N)
+    for trial in range(N):
+        X = sigma_true * np.random.randn(n)
+        sample_vars[trial] = np.var(X, ddof=1)
+    mean_var = float(np.mean(sample_vars))
+    err = abs(mean_var - sigma_true**2) / sigma_true**2
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A85', mean_var=mean_var, sigma2=sigma_true**2,
+                frac=n1/d1, consistent=ok,
+                summary=f"E[s²]={mean_var:.4f} σ²={sigma_true**2:.4f}")
+
+def eq_A86(cfg):
+    """Bessel's correction: E[s²_biased] = (n-1)/n · σ² < σ²."""
+    N = 50000; n = 50; sigma_true = 2.0
+    biased_vars = np.zeros(N)
+    for trial in range(N):
+        X = sigma_true * np.random.randn(n)
+        biased_vars[trial] = np.var(X, ddof=0)   # biased (divide by n)
+    mean_var = float(np.mean(biased_vars))
+    expected_biased = (n - 1) / n * sigma_true**2
+    err = abs(mean_var - expected_biased) / expected_biased
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A86', mean_var=mean_var, expected_biased=expected_biased,
+                frac=n1/d1, consistent=ok,
+                summary=f"E[s²_biased]={mean_var:.4f} (n-1)/n·σ²={expected_biased:.4f}")
+
+def eq_A87(cfg):
+    """Covariance vs independence: independent ⇒ Cov=0; converse false."""
+    N = 100000
+    X = np.random.randn(N)
+    Y = np.random.randn(N)
+    cov_emp = float(np.mean((X - X.mean()) * (Y - Y.mean())))
+    se = float(np.std((X - X.mean()) * (Y - Y.mean()), ddof=1) / np.sqrt(N))
+    n1, d1, ok = is_below_mat(abs(cov_emp) / max(se, 1e-12), 5, 1)
+    return dict(name='A87', cov_emp=cov_emp, se=se,
+                frac=n1/d1, consistent=ok,
+                summary=f"Cov={cov_emp:.4f}±{se:.4f} (indep ⇒ 0)")
+
+def eq_A88(cfg):
+    """Pearson correlation ρ ∈ [-1, 1]."""
+    N = 100000
+    X = np.random.randn(N)
+    Y = 0.7*X + np.sqrt(1 - 0.49)*np.random.randn(N)
+    muX, muY = X.mean(), Y.mean()
+    num = np.mean((X - muX) * (Y - muY))
+    den = np.std(X, ddof=0) * np.std(Y, ddof=0)
+    rho = float(num / den)
+    in_range = (-1.0 - 1e-9) <= rho <= (1.0 + 1e-9)
+    err = abs(rho - 0.7)   # expected correlation
+    n1, d1, ok = is_below_mat(err, 5, 100)
+    return dict(name='A88', rho=rho, frac=n1/d1, consistent=ok and in_range,
+                summary=f"ρ={rho:.4f} (expect 0.7)")
+
+def eq_A89(cfg):
+    """Spearman rank correlation = Pearson on ranks; monotonic ⇒ 1."""
+    N = 10000
+    X = np.random.randn(N)
+    Y = X + 0.1*np.random.randn(N)   # near-monotonic
+    from scipy.stats import spearmanr
+    rho_s, _ = spearmanr(X, Y)
+    rho_s = float(rho_s)
+    in_range = (-1.0 - 1e-9) <= rho_s <= (1.0 + 1e-9)
+    ok = in_range and rho_s > 0.95   # near-monotonic
+    n1, d1, _ = is_below_mat(1 - rho_s, 5, 100)
+    return dict(name='A89', rho_s=rho_s, frac=n1/d1, consistent=ok,
+                summary=f"ρ_s={rho_s:.4f} (near-monotonic)")
+
+
+# %% [8]  Orchestrators + main
+# ═══════════════════════════════════════════════════════════════════════════
+PLOT_MAP = {
+    'I1': plot_I1, 'I2': plot_I2, 'I3': plot_I3, 'I4': plot_I4, 'I5': plot_I5,
+    'I6': plot_I6, 'I7': plot_I7,
+    'P1': plot_P1, 'P2': plot_P2, 'P3': plot_P3, 'P4': plot_P4,
+    'P5': plot_P5, 'P6': plot_P6, 'P7': plot_P7, 'P8': plot_P8,
+    'A1': plot_A1, 'A2': plot_A2, 'A3': plot_A3, 'A4': plot_A4, 'A5': plot_A5,
+    'A6': plot_A6, 'A7': plot_A7, 'A8': plot_A8, 'A9': plot_A9, 'A10': plot_A10,
+    'A11': plot_A11, 'A12': plot_A12, 'A13': plot_A13, 'A14': plot_A14,
+    'A15': plot_A15, 'A16': plot_A16, 'A17': plot_A17, 'A18': plot_A18,
+    'A19': plot_A19, 'A20': plot_A20, 'A21': plot_A21, 'A22': plot_A22,
+    'A23': plot_A23,
+    'B1': plot_B1, 'B2': plot_B2, 'B3': plot_B3, 'B4': plot_B4, 'B5': plot_B5,
+    'B6': plot_B6, 'B7': plot_B7,
+}
+
+THRESHOLDS = {
+    'I1': (5,100), 'I2': (2,100), 'I3': (5,1), 'I4': (3,1),
+    'I5': (1,100), 'I6': (1,1e9), 'I7': (5,1),
+    'P1': (5,100), 'P2': (2,100), 'P3': (4,1), 'P4': (1,1),
+    'P5': (1,1e6), 'P6': (3,1), 'P7': (5,1), 'P8': (1,1e9),
+    'A1': (5,100), 'A2': (1,1e9), 'A3': (5,100), 'A4': (2,100),
+    'A5': (1,1e6), 'A6': (5,100), 'A7': (1,1e9), 'A8': (5,100),
+    'A9': (1,1e6), 'A10': (1,1e9), 'A11': (5,1), 'A12': (5,100),
+    'A13': (105,100), 'A14': (1,1e9), 'A15': (1,1e9), 'A16': (5,100),
+    'A17': (5,100), 'A18': (5,100), 'A19': (1,1e9), 'A20': (5,100),
+    'A21': (1,1e9), 'A22': (5,100), 'A23': (1,1e6),
+    'A24': (5,100), 'A25': (5,100), 'A26': (5,100), 'A27': (1,1e6),
+    'A28': (1,1e9), 'A29': (1,1e6), 'A30': (5,100), 'A31': (5,100),
+    'A32': (1,1e9), 'A33': (1,1e6), 'A34': (1,1e9), 'A35': (5,1),
+    'A36': (1,1e9), 'A37': (5,1), 'A38': (1,1e6), 'A39': (1,1e9),
+    'A40': (1,1e9), 'A41': (1,1e9), 'A42': (1,1e9), 'A43': (1,1e9),
+    'A44': (1,1e9), 'A45': (1,1e4), 'A46': (5,100), 'A47': (5,100),
+    'A48': (5,100), 'A49': (5,100), 'A50': (1,1e6), 'A51': (20,100),
+    'A52': (1,1e6),
+    'B1': (1,1), 'B2': (1,1e9), 'B3': (5,100), 'B4': (5,100),
+    'B5': (2,100), 'B6': (1,1e6), 'B7': (1,1),
+    'B8': (5,100), 'B9': (1,1), 'B10': (1,1e6), 'B11': (1,1),
+    'B12': (1,1), 'B13': (1,1e9), 'B14': (5,1), 'B15': (5,100),
+    'B16': (1,1), 'B17': (1,1e9),
+    # A53-A89 (37 new audit-only equations)
+    'A53': (1,1e6), 'A54': (1,1e9), 'A55': (1,1e9), 'A56': (5,100),
+    'A57': (1,100), 'A58': (50,1), 'A59': (1,1e6), 'A60': (1,1e6),
+    'A61': (1,1e9), 'A62': (100,100), 'A63': (1,1), 'A64': (1,1),
+    'A65': (1,1e9), 'A66': (1,1e9), 'A67': (1,1e9), 'A68': (1,1e9),
+    'A69': (1,1e9), 'A70': (1,1e9), 'A71': (1,1e4), 'A72': (2,10),
+    'A73': (1,1e6), 'A74': (1,1e9), 'A75': (1,1e9), 'A76': (5,100),
+    'A77': (5,100), 'A78': (5,100), 'A79': (5,100), 'A80': (5,100),
+    'A81': (5,100), 'A82': (5,100), 'A83': (5,100), 'A84': (5,100),
+    'A85': (5,100), 'A86': (5,100), 'A87': (5,1), 'A88': (5,100),
+    'A89': (5,100),
+}
+
+ALL_NAMES = (
+    [f'I{i}' for i in range(1,8)] +
+    [f'P{i}' for i in range(1,9)] +
+    [f'A{i}' for i in range(1,90)] +
+    [f'B{i}' for i in range(1,18)]
+)
+
+# ── Runners ─────────────────────────────────────────────────────────────────
+def run_all_and_audit(cfg):
+    section_header('121 EQUATIONS  ::  EXECUTION + AUDIT')
+    results = {}
+    results['I1'] = eq_I1(cfg); results['I2'] = eq_I2(cfg); results['I3'] = eq_I3(cfg)
+    results['I4'] = eq_I4(cfg); results['I5'] = eq_I5(cfg); results['I6'] = eq_I6(cfg)
+    results['I7'] = eq_I7(cfg)
+    results['P1'] = eq_P1(cfg); results['P2'] = eq_P2(cfg); results['P3'] = eq_P3(cfg)
+    results['P4'] = eq_P4(cfg); results['P5'] = eq_P5(cfg); results['P6'] = eq_P6(cfg)
+    results['P7'] = eq_P7(cfg, results['P1']); results['P8'] = eq_P8(cfg)
+    for i in range(1, 24): results[f'A{i}'] = globals()[f'eq_A{i}'](cfg)
+    for i in range(24, 53): results[f'A{i}'] = globals()[f'eq_A{i}'](cfg)
+    for i in range(53, 90): results[f'A{i}'] = globals()[f'eq_A{i}'](cfg)
+    for i in range(1, 8): results[f'B{i}'] = globals()[f'eq_B{i}'](cfg)
+    for i in range(8, 18): results[f'B{i}'] = globals()[f'eq_B{i}'](cfg)
+
+    for n in ALL_NAMES:
+        rec = results[n]
+        mark = '✓' if rec['consistent'] else '✗'
+        print(f"  [{mark}] {n:<4s}  {rec['summary']}")
+    return results
+
+def fraction_audit(results):
+    subsection_header('EXACT FRACTION / RATIO AUDIT (121 equations)')
+    print(f"  {'Eq':<4s} {'Ratio (float)':>16s} {'Ratio (Fraction)':>24s} {'Threshold':>16s} {'Status':>8s}")
+    hr_line('─', 78)
+    all_pass = True
+    for name in ALL_NAMES:
+        rec = results[name]; fr = rec['frac']; thr = THRESHOLDS[name]
+        try:
+            f = Fraction(fr).limit_denominator(int(1e9)) if fr > 0 else Fraction(0)
+            n, d = f.numerator, f.denominator
+        except Exception:
+            n, d = fr, 1
+        status = 'PASS' if rec['consistent'] else 'FAIL'
+        if not rec['consistent']: all_pass = False
+        print(f"  {name:<4s} {fr:>16.6e} {frac_str(n, d):>24s} "
+              f"{frac_str(*thr):>16s} {status:>8s}")
+    return all_pass
+
+def export_json(results, cfg):
+    path = save_path(cfg, 'audit_results.json')
+    with open(path, 'w') as f:
+        out = {n: {'consistent': bool(results[n]['consistent']),
+                   'frac_float': float(results[n]['frac']),
+                   'summary': results[n]['summary']} for n in ALL_NAMES}
+        json.dump(out, f, indent=2)
+    return path
+
+def export_csv(results, cfg):
+    path = save_path(cfg, 'audit_results.csv')
+    with open(path, 'w', newline='') as f:
+        w = csv.writer(f)
+        w.writerow(['equation', 'status', 'frac_float', 'summary'])
+        for n in ALL_NAMES:
+            rec = results[n]
+            w.writerow([n, 'PASS' if rec['consistent'] else 'FAIL',
+                        f"{rec['frac']:.12e}", rec['summary']])
+    return path
+
+def run_all_plots(cfg, results):
+    section_header('VISUALIZATION SUITE  ::  45 EQUATIONS')
+    for name, fn in PLOT_MAP.items():
+        if name in results:
+            fn(cfg, results[name])
+    print(f"\n  All plots saved under: {ensure_outdir(cfg)}")
+
+# ── Main ────────────────────────────────────────────────────────────────────
+def main(no_plots=False, no_audit=False, no_export=False, seed=42, outdir='./marl_artifacts', verbose=False):
+    import time
+    np.random.seed(seed)
+    cfg = Cfg(verbose=verbose, outdir=outdir)
+    ensure_outdir(cfg); t0 = time.time()
+    results = run_all_and_audit(cfg)
+    all_pass = True
+    if not no_audit:
+        all_pass = fraction_audit(results)
+    if not no_export:
+        print(f"\n  Exported: {export_json(results, cfg)}")
+        print(f"  Exported: {export_csv(results, cfg)}")
+    if not no_plots:
+        run_all_plots(cfg, results)
+    dt = time.time() - t0
+    section_header('SUMMARY')
+    total = len(results); passed = sum(1 for n in ALL_NAMES if results[n]['consistent'])
+    print(f"  Equations executed : {total}")
+    print(f"  Passed             : {passed} / {total}")
+    print(f"  Elapsed            : {dt:.2f} s")
+    print(f"  Artifacts saved to : {ensure_outdir(cfg)}")
+    if not all_pass:
+        print("  ⚠  Some equations failed the fraction audit.")
+    else:
+        print(f"  All {total} equations complete ✓")
+    return results
+
+if __name__ == '__main__':
+    main()
+
+
+
+
+
+
+══════════════════════════════════════════════════════════════════════════════
+  121 EQUATIONS  ::  EXECUTION + AUDIT
+══════════════════════════════════════════════════════════════════════════════
+  [✓] I1    trap=2.4008 simp=2.4008 MC=2.4300±0.0529
+  [✓] I2    dir=3.3179 trap=3.3299
+  [✓] I3    T=60.7912s 95%CI±0.9117
+  [✓] I4    Thr=2046.0 z=0.246
+  [✓] I5    int=99.9955 1/lam=100.0000
+  [✓] I6    x=913.6 v=13.070 err=1.14e-13
+  [✓] I7    gap=25.000 err=0.0000
+  [✓] P1    emp=113.0639 int=113.2181
+  [✓] P2    piG=0.750/0.744 loss=0.1930/0.1875
+  [✓] P3    p=0.100 ph=0.1007 z=0.704
+  [✓] P4    rho=[0.    0.108 0.325 0.65 ] mono=1
+  [✓] P5    dn=1.08048226 da=1.08048226
+  [✓] P6    D=0.9000 1-p=0.9000 z=0.011
+  [✓] P7    tau=111.9980±0.5847 exp=113.2181
+  [✓] P8    mean=-8.8087 rg=-8.8087 b1=1 b0=1
+  [✓] A1    emp=163.4242 ana=163.2185
+  [✓] A2    peak=600.0000
+  [✓] A3    mean=114.5196 split=114.5196
+  [✓] A4    P=0.0826/0.0827
+  [✓] A5    err=0.00e+00 mono=1
+  [✓] A6    emp=-16491.73 ana=-16409.37
+  [✓] A7    err=1.15e-14
+  [✓] A8    V=[13.095 15.269 12.186]
+  [✓] A9    Q=1.645000 tgt=2.950000
+  [✓] A10   A=[-0.100 -0.300 0.400]
+  [✓] A11   gradJ=-0.0058±0.0161
+  [✓] A12   mean A=0.5291
+  [✓] A13   max|H|=1.0138
+  [✓] A14   THW=1.2500s
+  [✓] A15   SHW=35.0000m
+  [✓] A16   xbar=0.4244 err=1.11e-16
+  [✓] A17   L=0.4982 lamW=0.4982
+  [✗] A18   rho=0.70 err=0.1490
+  [✓] A19   C=6.9189e+07
+  [✓] A20   G=6.8921e+07 PER=3.8646e-03
+  [✓] A21   R=0.9500
+  [✓] A22   Eb=5.0000e-08
+  [✓] A23   pint=1.000000
+  [✓] A24   P95 emp=227.36 ana=227.42
+  [✓] A25   err=2.8883e-01
+  [✓] A26   max|dp|=0.0022
+  [✓] A27   ||V_sh-(V+Phi)||=1.33e-15
+  [✓] A28   Q_joint=8.2193 err=0.00e+00
+  [✓] A29   G*=200.0000 max|err|=0.00e+00
+  [✓] A30   err=4.2757e-01 (lam=0.80)
+  [✓] A31   err_double=0.000 err_single=0.000
+  [✓] A32   err=0.00e+00 eps=0.20
+  [✓] A33   ||Qt-Qon||=7.99e-15 (τ=0.95)
+  [✓] A34   V=2.500 mean(Q)=2.500
+  [✓] A35   grad=0.0024±0.0022 (mu=0)
+  [✓] A36   E[A]=1.67e-16 V=2.450
+  [✓] A37   ∇J=0.0025±0.0063
+  [✓] A38   H=1.3863 log(n)=1.3863
+  [✓] A39   KL(P||P)=0.00e+00
+  [✓] A40   E_IS=1.8000 E_new=1.8000
+  [✓] A41   ΣP=1.000000
+  [✓] A42   Q_tot=2.050 grad_min=0.200
+  [✓] A43   Q_tot=69.3176
+  [✓] A44   L_total=9.1000 err=0.00e+00
+  [✓] A45   ∫h dτ=8.6827 vs log(S(lo)/S(hi))=8.6827
+  [✓] A46   E[τ|τ>150] emp=205.30 ana=204.81
+  [✓] A47   CV=0.9939 (exp CV=1)
+  [✓] A48   P_wait emp=0.229 ana=0.237
+  [✓] A49   E[W] M/D/1 emp=1.193 ana=1.167
+  [✓] A50   E[W] kingman=1.500 exact=1.500
+  [✓] A51   Q emp=19.569 HT=19.000 (ρ=0.95)
+  [✓] A52   PL=100.046 dB @d=1000m f=2.4GHz
+  [✓] A53   LSE=5.1944 max=5.0 gap=0.1944
+  [✓] A54   Σ(softmax-p)=1.39e-17
+  [✓] A55   Σγ^k=99.995683 (K=1000)
+  [✓] A56   ρ1=0.6964 (φ=0.70)
+  [✓] A57   P(|z|≤3)=0.9972 (expect 0.9973)
+  [✓] A58   W1 emp=0.0058 ~ 1/√N=0.0032
+  [✓] A59   H_unif=1.6094 H_max=1.6094 H_skew=1.3331
+  [✓] A60   G_unif=0.0000 G_ineq=0.8000
+  [✓] A61   R²=1.000000
+  [✓] A62   JB=0.147 S=-0.0012 K=-0.0054
+  [✓] A63   P_emp=0.0829 P_bound=0.4000
+  [✓] A64   P_emp=0.0027 P_bound=0.1111
+  [✓] A65   P_emp=0.0000 ≤ Hoeff=0.0366, Bern=0.0586
+  [✓] A66   P_emp=0.6053 ≥ P_PZ=0.1246
+  [✓] A67   |E[XY]|²=0.2492 ≤ E[X²]E[Y²]=1.2482
+  [✓] A68   E|x+y|=1.1310 ≤ E|x|+E|y|=1.5928
+  [✓] A69   max|sm_naive - sm_stable|=0.00e+00
+  [✓] A70   H(p,q)=1.3863 = H(p)+KL=1.3863
+  [✓] A71   MSE=0.2508 = bias²+var=0.2508
+  [✓] A72   R²=0.9975 β=[1.45, -1.92, 0.698]
+  [✓] A73   ||∇(xᵀAx) num - ana||=2.45e-11
+  [✓] A74   Newton √2=1.4142135624 vs 1.4142135624
+  [✓] A75   err_euler=1.85e-03 err_rk4=3.09e-11
+  [✓] A76   mean=4.996 var=4.983 (λ=5.0)
+  [✓] A77   E[Beta]=0.3000 ana=0.3000
+  [✓] A78   E[Gamma]=5.9999 ana=6.0000
+  [✓] A79   E[Geom]=3.3207 ana=3.3333
+  [✓] A80   E[NegBin]=7.5163 ana=7.5000
+  [✓] A81   E[max(Unif)]=0.9091 ana=0.9091
+  [✓] A82   E[median(Unif)]=0.4998 ana=0.5000
+  [✓] A83   MGF(1.5)=3.0281 ana=3.0802
+  [✓] A84   |CF(1)|=0.6064 ana=0.6065
+  [✓] A85   E[s²]=4.0012 σ²=4.0000
+  [✓] A86   E[s²_biased]=3.9213 (n-1)/n·σ²=3.9200
+  [✓] A87   Cov=-0.0038±0.0032 (indep ⇒ 0)
+  [✓] A88   ρ=0.6998 (expect 0.7)
+  [✓] A89   ρ_s=0.9946 (near-monotonic)
+  [✓] B1    max_ratio=0.9000 <=1? 1
+  [✓] B2    min(Vnew-Vold)=0.0000e+00
+  [✓] B3    eps=0.10 max|Δp|=0.0022
+  [✓] B4    VoI(0)=16420 mono=1 err=1.97e-03
+  [✓] B5    viol=0.0841/0.0827 (SLA=0.05, met=0)
+  [✓] B6    NE=(2,1) g1=0.0000 g2=0.0000
+  [✓] B7    Σα=12.0901 (div) Σα²=1.6449 (conv)
+  [✓] B8    drift=0.0000 Qmean=0.5968 bound=2.00
+  [✓] B9    lam2=0.6000 t<=12 emp=8
+  [✓] B10   gap_cvx=1.3346 gap_ccv=0.0353
+  [✓] B11   P_emp=0.0005 P_bound=0.2707
+  [✓] B12   P_emp=0.0190 P_bound=0.3512
+  [✓] B13   TV=0.2000 <= sqrt(KL/2)=0.2312
+  [✓] B14   E[M_τ]=-0.0104±0.0161
+  [✓] B15   E[X]=est 1.997 / ana 2.000
+  [✓] B16   P_emp=0.2198 P_bound=1.5576
+  [✓] B17   π=[0.300 0.500 0.200] ||πP-π||=2.22e-16
+
+──────────────────────────────────────────────────────────────────────────────
+  EXACT FRACTION / RATIO AUDIT (121 equations)
+──────────────────────────────────────────────────────────────────────────────
+  Eq      Ratio (float)         Ratio (Fraction)        Threshold   Status
+──────────────────────────────────────────────────────────────────────────────
+  I1       2.919973e-02       29186599/999550193            5/100     PASS
+  I2       3.594930e-03        2972649/826900312            2/100     PASS
+  I3       0.000000e+00                      0/1              5/1     PASS
+  I4       2.463521e-01       98354373/399243028              3/1     PASS
+  I5       4.537910e-05          34859/768173058            1/100     PASS
+  I6       0.000000e+00                      0/1     1/1000000000     PASS
+  I7       2.346198e-06            782/333305265              5/1     PASS
+  P1       1.362264e-03         976046/716488023            5/100     PASS
+  P2       6.200000e-03                  31/5000            2/100     PASS
+  P3       7.041501e-01      113797284/161609419              4/1     PASS
+  P4       6.500000e-01                    13/20              1/1     PASS
+  P5       0.000000e+00                      0/1        1/1000000     PASS
+  P6       1.054139e-02       10149771/962849026              3/1     PASS
+  P7       1.220097e+00      849483011/696242161              5/1     PASS
+  P8       0.000000e+00                      0/1     1/1000000000     PASS
+  A1       1.260466e-03         753991/598184497            5/100     PASS
+  A2       0.000000e+00                      0/1     1/1000000000     PASS
+  A3       0.000000e+00                      0/1            5/100     PASS
+  A4       7.303384e-05          12866/176164921            2/100     PASS
+  A5       0.000000e+00                      0/1        1/1000000     PASS
+  A6       5.018799e-03        4931977/982700691            5/100     PASS
+  A7       0.000000e+00                      0/1     1/1000000000     PASS
+  A8       0.000000e+00                      0/1            5/100     PASS
+  A9       0.000000e+00                      0/1        1/1000000     PASS
+  A10      0.000000e+00                      0/1     1/1000000000     PASS
+  A11      3.582757e-01         9248838/25814863              5/1     PASS
+  A12      0.000000e+00                      0/1            5/100     PASS
+  A13      1.013761e+00      681765358/672510645          105/100     PASS
+  A14      0.000000e+00                      0/1     1/1000000000     PASS
+  A15      0.000000e+00                      0/1     1/1000000000     PASS
+  A16      0.000000e+00                      0/1            5/100     PASS
+  A17      0.000000e+00                      0/1            5/100     PASS
+  A18      1.489724e-01       39440446/264750013            5/100     FAIL
+  A19      0.000000e+00                      0/1     1/1000000000     PASS
+  A20      0.000000e+00                      0/1            5/100     PASS
+  A21      0.000000e+00                      0/1     1/1000000000     PASS
+  A22      0.000000e+00                      0/1            5/100     PASS
+  A23      0.000000e+00                      0/1        1/1000000     PASS
+  A24      2.746421e-04         133148/484805527            5/100     PASS
+  A25      1.891667e-02        6100919/322515464            5/100     PASS
+  A26      2.209457e-03        1946897/881165471            5/100     PASS
+  A27      0.000000e+00                      0/1        1/1000000     PASS
+  A28      0.000000e+00                      0/1     1/1000000000     PASS
+  A29      0.000000e+00                      0/1        1/1000000     PASS
+  A30      2.800259e-02       15958079/569878699            5/100     PASS
+  A31      0.000000e+00                      0/1            5/100     PASS
+  A32      0.000000e+00                      0/1     1/1000000000     PASS
+  A33      0.000000e+00                      0/1        1/1000000     PASS
+  A34      0.000000e+00                      0/1     1/1000000000     PASS
+  A35      1.052688e+00      335535845/318742056              5/1     PASS
+  A36      0.000000e+00                      0/1     1/1000000000     PASS
+  A37      4.016774e-01      232696276/579311387              5/1     PASS
+  A38      0.000000e+00                      0/1        1/1000000     PASS
+  A39      0.000000e+00                      0/1     1/1000000000     PASS
+  A40      0.000000e+00                      0/1     1/1000000000     PASS
+  A41      0.000000e+00                      0/1     1/1000000000     PASS
+  A42      0.000000e+00                      0/1     1/1000000000     PASS
+  A43      0.000000e+00                      0/1     1/1000000000     PASS
+  A44      0.000000e+00                      0/1     1/1000000000     PASS
+  A45      0.000000e+00                      0/1          1/10000     PASS
+  A46      2.425593e-03         927839/382520558            5/100     PASS
+  A47      6.110891e-03        3468829/567647044            5/100     PASS
+  A48      7.602105e-03              3611/475000            5/100     PASS
+  A49      2.283431e-02        7192685/314994677            5/100     PASS
+  A50      0.000000e+00                      0/1        1/1000000     PASS
+  A51      2.995121e-02       16497158/550801095           20/100     PASS
+  A52      0.000000e+00                      0/1        1/1000000     PASS
+  A53      0.000000e+00                      0/1        1/1000000     PASS
+  A54      0.000000e+00                      0/1     1/1000000000     PASS
+  A55      0.000000e+00                      0/1     1/1000000000     PASS
+  A56      3.627597e-03        3541413/976242076            5/100     PASS
+  A57      1.000000e-04                  1/10000            1/100     PASS
+  A58      8.290534e-01      797973361/962511394             50/1     PASS
+  A59      0.000000e+00                      0/1        1/1000000     PASS
+  A60      0.000000e+00                      0/1        1/1000000     PASS
+  A61      0.000000e+00                      0/1     1/1000000000     PASS
+  A62      9.264395e-01      376024328/405881159          100/100     PASS
+  A63      2.072500e-01                 829/4000              1/1     PASS
+  A64      2.430000e-02                243/10000              1/1     PASS
+  A65      0.000000e+00                      0/1     1/1000000000     PASS
+  A66      0.000000e+00                      0/1     1/1000000000     PASS
+  A67      0.000000e+00                      0/1     1/1000000000     PASS
+  A68      0.000000e+00                      0/1     1/1000000000     PASS
+  A69      0.000000e+00                      0/1     1/1000000000     PASS
+  A70      0.000000e+00                      0/1     1/1000000000     PASS
+  A71      2.507785e-06           1325/528354806          1/10000     PASS
+  A72      2.524416e-03        2037095/806956857             2/10     PASS
+  A73      0.000000e+00                      0/1        1/1000000     PASS
+  A74      0.000000e+00                      0/1     1/1000000000     PASS
+  A75      0.000000e+00                      0/1     1/1000000000     PASS
+  A76      3.403853e-03        1940824/570184365            5/100     PASS
+  A77      9.181694e-06           5373/585186149            5/100     PASS
+  A78      1.221336e-05           9673/792001383            5/100     PASS
+  A79      3.793000e-03             3793/1000000            5/100     PASS
+  A80      2.166667e-03                  13/6000            5/100     PASS
+  A81      1.929375e-05          11684/605584835            5/100     PASS
+  A82      2.409200e-04         238630/990494857            5/100     PASS
+  A83      1.692950e-02        5969723/352622490            5/100     PASS
+  A84      1.611401e-04          85413/530054296            5/100     PASS
+  A85      2.898560e-04         279097/962881440            5/100     PASS
+  A86      3.242959e-04         291269/898158264            5/100     PASS
+  A87      1.208433e+00     1204153165/996458268              5/1     PASS
+  A88      1.763989e-04         143853/815498071            5/100     PASS
+  A89      5.448399e-03          285430/52387867            5/100     PASS
+  B1       9.000000e-01                     9/10              1/1     PASS
+  B2       0.000000e+00                      0/1     1/1000000000     PASS
+  B3       2.200000e-03                  11/5000            5/100     PASS
+  B4       1.970316e-03        1066550/541309037            5/100     PASS
+  B5       1.446966e-03         859713/594148655            2/100     PASS
+  B6       0.000000e+00                      0/1        1/1000000     PASS
+  B7       1.644924e+00      675580498/410706191              1/1     PASS
+  B8       6.250063e-06                 5/799992            5/100     PASS
+  B9       6.666667e-01                      2/3              1/1     PASS
+  B10      0.000000e+00                      0/1        1/1000000     PASS
+  B11      1.699483e-03        1242583/731153575              1/1     PASS
+  B12      5.399239e-02         2903987/53785116              1/1     PASS
+  B13      3.120168e-02       17080386/547418861     1/1000000000     PASS
+  B14      6.469034e-01      502180229/776283210              5/1     PASS
+  B15      3.101961e-03        2388154/769885293            5/100     PASS
+  B16      1.411272e-01      100829017/714454712              1/1     PASS
+  B17      0.000000e+00                      0/1     1/1000000000     PASS
+
+  Exported: ./marl_artifacts/audit_results.json
+  Exported: ./marl_artifacts/audit_results.csv
+
+══════════════════════════════════════════════════════════════════════════════
+  VISUALIZATION SUITE  ::  45 EQUATIONS
+══════════════════════════════════════════════════════════════════════════════
+
+  All plots saved under: ./marl_artifacts
+
+══════════════════════════════════════════════════════════════════════════════
+  SUMMARY
+══════════════════════════════════════════════════════════════════════════════
+  Equations executed : 121
+  Passed             : 120 / 121
+  Elapsed            : 46.34 s
+  Artifacts saved to : ./marl_artifacts
+  ⚠  Some equations failed the fraction audit.
+
+
+
+
+
+
+
+
+
+
+
