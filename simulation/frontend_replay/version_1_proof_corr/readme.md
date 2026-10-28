@@ -1,6 +1,5 @@
  MATHEMATICAL DOCUMENTATION: TRAFFIC GROWTH MODEL COMPARISON
-This documentation outlines the mathematical formulas, physical expressions, and boundary characteristics of the four traffic growth models evaluated in /content/comprehensive_fit_diagnostics.png and /content/compareable_model.png.
-
+This documentation outlines the mathematical formulas, physical expressions, and boundary characteristics of the four traffic growth models .
 1. Logistic (Mechanistic) Model
 Mathematical Expression:
 y^(t)=L1+e−k(t−x0) 
