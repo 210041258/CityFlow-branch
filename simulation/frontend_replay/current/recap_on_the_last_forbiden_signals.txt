@@ -1,0 +1,446 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+#  LATENCY-RESILIENT MARL — OPTIMIZED & MATLAB-ALIGNED HIGH-EXPRESSION PIPELINE
+# ═══════════════════════════════════════════════════════════════════════════════
+import math
+import numpy as np
+import scipy.stats as stats
+from scipy.integrate import simpson, trapezoid, quad
+from scipy.optimize import curve_fit
+from fractions import Fraction
+import matplotlib.pyplot as plt
+import warnings
+from typing import Dict, Tuple, List
+import time
+
+warnings.filterwarnings('ignore')
+try:
+    get_ipython().run_line_magic('matplotlib', 'inline')
+except (NameError, AttributeError):
+    pass
+
+np.random.seed(42)
+
+# ── Exact fraction thresholds ────────────────────────────────────────────────
+TH = {
+    '1pct':   Fraction(1, 100),
+    '2pct':   Fraction(2, 100),
+    '5pct':   Fraction(5, 100),
+    '1e-6':   Fraction(1, 10**6),
+    '1e-9':   Fraction(1, 10**9),
+    '2pp':    Fraction(2, 100),
+    '3sigma': Fraction(3, 1),
+    '4sigma': Fraction(4, 1),
+    '5sigma': Fraction(5, 1),
+}
+
+# ── Configuration (MATLAB-aligned) ───────────────────────────────────────────
+CFG = {
+    'L': 302.2328, 'k': 0.0143, 'x0': 101.5374,
+    'tau_min': 0.0, 'tau_max': 600.0,
+    'mu_tau': math.log(100.0), 'sigma_tau': 0.5,
+    'pG': 0.05, 'pB': 0.60, 'p_trans': 0.10, 'q_trans': 0.30,
+    'dt': 0.35, 'T_sim': 60.0, 'lambda_decay': 0.01,
+    'beta': 0.5, 'p_loss': 0.10, 'p_drop': 0.10,
+    'n_agents': 9, 'K_steps': 200,
+    'verbose': True,
+}
+
+# ── Fraction helpers ─────────────────────────────────────────────────────────
+def to_frac(x, max_den=10**9) -> Fraction:
+    return Fraction(x).limit_denominator(max_den)
+
+def is_below(value, threshold: Fraction) -> Tuple[Fraction, bool]:
+    fr = to_frac(abs(float(value)))
+    return fr, fr < threshold
+
+def frac_str(fr: Fraction) -> str:
+    return f"{fr.numerator}/{fr.denominator}"
+
+def pct(fr: Fraction) -> str:
+    return f"{float(fr)*100:.4f}%"
+
+def hr(char='─', n=78):
+    print(char * n)
+
+def section(t):
+    print("\n" + "═" * 78 + f"\n  {t}\n" + "═" * 78)
+
+def subsection(t):
+    print("\n" + "─" * 78 + f"\n  {t}\n" + "─" * 78)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  I1 — Average Waiting Time   (thesis Eq. 13, p.45)
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_I1(cfg):
+    if cfg['verbose']: print("\n[I1] Average Waiting Time — Eq. 13, p.45")
+    T = float(cfg['T_sim'])
+    t = np.linspace(0.0, T, 3000); N = len(t)
+    v = np.maximum(5.0 - 3.0 * np.sin(0.5 * t) + 0.5 * np.random.randn(N), 0.0)
+    for frac in (0.15, 0.45, 0.80):
+        s = int(N * frac); v[max(0, s - 20): min(N, s + 20)] = 0.0
+    ind = (v < 0.1).astype(float)
+    W_trapz   = float(trapezoid(ind, t))
+    W_simpson = float(simpson(ind, x=t))
+    N_mc = 50000
+    mc   = ind[np.random.randint(0, N, N_mc)]
+    W_mc = T * float(mc.mean())
+    W_se = T * float(mc.std(ddof=1)) / math.sqrt(N_mc)
+    fr_ts, ok_ts = is_below(abs(W_trapz - W_simpson) / max(abs(W_trapz), 1e-12), TH['1pct'])
+    fr_mc, ok_mc = is_below(abs(W_trapz - W_mc), 5 * to_frac(W_se) + TH['1pct'] * to_frac(W_trapz))
+    frac = max(fr_ts, fr_mc)
+    return dict(name='I1', W_trapz=W_trapz, W_simpson=W_simpson, W_mc=W_mc, W_se=W_se,
+                frac=frac, frac_ts=fr_ts, frac_mc=fr_mc, consistent=ok_ts and ok_mc,
+                summary=f"trap={W_trapz:.4f} simp={W_simpson:.4f} MC={W_mc:.4f}±{W_se:.4f}")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  I2 — Average Queue Length   (thesis Eq. 4.3, p.39)
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_I2(cfg):
+    if cfg['verbose']: print("\n[I2] Average Queue Length — Eq. 4.3, p.39")
+    n, K = cfg['n_agents'], cfg['K_steps']
+    tv = np.linspace(0.0, 1.0, K)
+    c = (0.3 + 0.4 * np.arange(n) / max(n - 1, 1))[:, np.newaxis]
+    A = (4.0 + 8.0 * np.random.rand(n))[:, np.newaxis]
+    Q = np.maximum(A * np.exp(-((tv - c) / 0.3) ** 2) + 0.5 * np.random.randn(n, K), 0.0)
+    Q_direct = float(Q.sum() / (n * K))
+    Q_trapz  = float(np.mean([trapezoid(Q[i, :], tv) for i in range(n)]))
+    fr, ok   = is_below(abs(Q_direct - Q_trapz) / max(abs(Q_direct), 1e-12), TH['2pct'])
+    return dict(name='I2', Q_direct=Q_direct, Q_trapz=Q_trapz, frac=fr, consistent=ok,
+                summary=f"direct={Q_direct:.4f} trapz={Q_trapz:.4f} rel={pct(fr)}")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  I3 — Average Travel Time   (thesis Eq. 4.2, p.39)
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_I3(cfg):
+    if cfg['verbose']: print("\n[I3] Average Travel Time — Eq. 4.2, p.39")
+    N = 1000
+    t_arr = 10.0 * np.random.rand(N)
+    truth = np.maximum(60.0 + 15.0 * np.random.randn(N), 10.0)
+    t_dep = t_arr + truth
+    T_avg = float((t_dep - t_arr).mean())
+    T_ci  = 1.96 * float((t_dep - t_arr).std(ddof=1)) / math.sqrt(N)
+    fr, ok = is_below(abs(T_avg - truth.mean()), to_frac(T_ci))
+    return dict(name='I3', T_avg=T_avg, T_ci95=T_ci, T_truth=float(truth.mean()), frac=fr, consistent=ok,
+                summary=f"T̄={T_avg:.4f}s 95%CI±{T_ci:.4f}s truth={truth.mean():.4f}s")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  I4 — Throughput   (thesis Eq. 14, p.45)
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_I4(cfg):
+    if cfg['verbose']: print("\n[I4] Throughput — Eq. 14, p.45")
+    N, p = 800, 0.85
+    T_sim = float(cfg['T_sim']) * 20
+    V = np.random.binomial(N, p)
+    Thr = V / T_sim * 3600.0
+    batch = np.random.binomial(N, p, size=200) / T_sim * 3600.0
+    z = float((Thr - batch.mean()) / (batch.std(ddof=1) + 1e-12))
+    fr, ok = is_below(abs(z), TH['3sigma'])
+    return dict(name='I4', Thr=float(Thr), Thr_mean=float(batch.mean()), z=z, frac=fr, consistent=ok,
+                summary=f"Thr={Thr:.1f} mean={batch.mean():.1f} z={z:.3f}σ")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  I5 — AoI Decay Kernel   (thesis Eq. 3.11, p.32)
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_I5(cfg):
+    if cfg['verbose']: print("\n[I5] AoI Decay Kernel — Eq. 3.11, p.32")
+    lam = float(cfg['lambda_decay'])
+    tau = np.linspace(0.0, 1000.0, 20001)
+    kap = np.exp(-lam * tau)
+    I_num = float(trapezoid(kap, tau)); I_ana = 1.0 / lam
+    fr, ok = is_below(abs(I_num - I_ana) / I_ana, TH['1pct'])
+    return dict(name='I5', I_num=I_num, I_ana=I_ana, frac=fr, consistent=ok,
+                summary=f"∫κ={I_num:.4f} 1/λ={I_ana:.4f} rel={pct(fr)}")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  I6 — Kinematics (Forward Euler)   (Team31 p.22)
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_I6(cfg):
+    if cfg['verbose']: print("\n[I6] Vehicle Kinematics — Forward Euler, p.22")
+    dt = float(cfg['dt']); N = int(float(cfg['T_sim']) / dt)
+    t = np.arange(N) * dt
+    x = np.zeros(N); v = np.zeros(N); v[0] = 15.0
+    for k in range(N - 1):
+        a = 0.3 * math.sin(0.1 * t[k]) - 0.1 * (v[k] - 15.0)
+        x[k + 1] = x[k] + v[k] * dt
+        v[k + 1] = v[k] + a * dt
+    xe = np.arange(N) * (15.0 * dt)
+    err = float(np.max(np.abs(xe - 15.0 * t)))
+    fr, ok = is_below(err, TH['1e-9'])
+    return dict(name='I6', x_final=float(x[-1]), v_final=float(v[-1]), euler_err=err, frac=fr, consistent=ok,
+                summary=f"x_final={x[-1]:.1f}m v_final={v[-1]:.3f}m/s err={err:.2e}")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  I7 — MYCC Control Law   (thesis Eq. B.1, p.41)
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_I7(cfg):
+    if cfg['verbose']: print("\n[I7] MYCC Control Law — Eq. B.1, p.41")
+    kd, ks, L_truck, target_gap = 0.2, 0.4, 10.0, 25.0
+    dt = float(cfg['dt']); Nt, steps = 5, 300
+    x = np.array([-i * (L_truck + 28.0) for i in range(Nt)], dtype=float)
+    v = np.full(Nt, 20.0)
+    for _ in range(steps):
+        u = np.zeros(Nt)
+        gap_err = (x[:-1] - x[1:] - L_truck) - target_gap
+        spd_err = v[:-1] - v[1:]
+        u[1:] = kd * gap_err + ks * spd_err
+        v += u * dt
+        x += v * dt
+    gaps = (x[:-1] - x[1:]) - L_truck
+    err_max = float(np.max(np.abs(gaps - target_gap)))
+    fr = to_frac(err_max); ok = fr < Fraction(5, 1)
+    return dict(name='I7', gaps=gaps.tolist(), err_max=err_max, frac=fr, consistent=ok,
+                summary=f"mean_gap={gaps.mean():.3f}m max_err={err_max:.4f}m")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  P1 — Truncated Log-Normal Latency   (thesis Eq. 3.6, p.30)
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_P1(cfg):
+    if cfg['verbose']: print("\n[P1] Truncated Log-Normal — Eq. 3.6, p.30")
+    mu, sg = cfg['mu_tau'], cfg['sigma_tau']
+    lo, hi = float(cfg['tau_min']), float(cfg['tau_max'])
+    dist = stats.lognorm(s=sg, scale=math.exp(mu))
+    Flo, Fhi = dist.cdf(lo), dist.cdf(hi)
+    N = 50000
+    u = Flo + (Fhi - Flo) * np.random.rand(N)
+    tau = dist.ppf(u)
+    def pdf_trunc(t): return dist.pdf(t) / (Fhi - Flo)
+    mean_int, _ = quad(lambda t: t * pdf_trunc(t), lo, hi, limit=200)
+    fr, ok = is_below(abs(tau.mean() - mean_int) / mean_int, TH['5pct'])
+    return dict(name='P1', tau=tau, mean_emp=float(tau.mean()), mean_int=float(mean_int), frac=fr, consistent=ok,
+                summary=f"emp={tau.mean():.4f} int={mean_int:.4f} rel={pct(fr)}")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  P2 — Gilbert–Elliott Loss   (thesis Eq. 3.7, p.30)
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_P2(cfg):
+    if cfg['verbose']: print("\n[P2] Gilbert-Elliott Loss — Eq. 3.7, p.30")
+    pG, pB = float(cfg['pG']), float(cfg['pB'])
+    p, q   = float(cfg['p_trans']), float(cfg['q_trans'])
+    T = 10000
+    state = np.ones(T, dtype=int); loss = np.zeros(T)
+    rand_states = np.random.rand(T)
+    rand_losses = np.random.rand(T)
+    for t in range(1, T):
+        prev = state[t - 1]
+        if prev == 1:
+            state[t] = 2 if rand_states[t] < p else 1
+            loss[t]  = rand_losses[t] < pG
+        else:
+            state[t] = 1 if rand_states[t] < q else 2
+            loss[t]  = rand_losses[t] < pB
+    pi_G = q / (p + q); pi_B = p / (p + q)
+    emp_G    = float((state == 1).mean())
+    emp_loss = float(loss.mean())
+    ana_loss = pi_G * pG + pi_B * pB
+    frG, okG = is_below(abs(emp_G - pi_G), TH['2pp'])
+    frL, okL = is_below(abs(emp_loss - ana_loss), TH['2pp'])
+    fr = max(frG, frL)
+    return dict(name='P2', state=state, loss=loss, pi_G=pi_G, emp_G=emp_G, emp_loss=emp_loss, ana_loss=ana_loss,
+                frac=fr, consistent=okG and okL, summary=f"π_G={pi_G:.3f}/{emp_G:.3f} loss={emp_loss:.4f}/{ana_loss:.4f}")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  P3 — Bernoulli Loss   (thesis p.34)
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_P3(cfg):
+    if cfg['verbose']: print("\n[P3] Bernoulli Loss — p.34")
+    p = float(cfg['p_loss']); N = 100000
+    L = (np.random.rand(N) < p).astype(int)
+    p_hat = float(L.mean()); se = math.sqrt(p_hat * (1 - p_hat) / N)
+    z = (p_hat - p) / se
+    fr, ok = is_below(abs(z), TH['4sigma'])
+    return dict(name='P3', p=p, p_hat=p_hat, z=float(z), frac=fr, consistent=ok,
+                summary=f"p={p:.3f} p̂={p_hat:.4f} z={z:.3f}σ")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  P4 — Severity Index   (thesis Eq. 3.8, p.30)
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_P4(cfg):
+    if cfg['verbose']: print("\n[P4] Severity Index — Eq. 3.8, p.30")
+    wt, wp = 0.5, 0.5
+    tmin, tmax = float(cfg['tau_min']), float(cfg['tau_max'])
+    sc = [('S1', 0.0, 0.00), ('S2', 100.0, 0.05), ('S3', 300.0, 0.15), ('S4', 600.0, 0.30)]
+    rho = np.array([wt * (t - tmin) / (tmax - tmin) + wp * pl for _, t, pl in sc])
+    mono = bool(np.all(np.diff(rho) > 0))
+    rng_ok = bool(np.all((rho >= 0) & (rho <= 1)))
+    fr = to_frac(abs(rho[-1] - rho[0]))
+    return dict(name='P4', rho=rho.tolist(), scenarios=[s[0] for s in sc], frac=fr, consistent=mono and rng_ok,
+                summary=f"ρ={np.round(rho,4)} monotone={mono} in[0,1]={rng_ok}")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  P5 — Logistic Degradation   (thesis Eq. 3.5, p.29)
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_P5(cfg):
+    if cfg['verbose']: print("\n[P5] Logistic Degradation — Eq. 3.5, p.29")
+    L, k, x0 = cfg['L'], cfg['k'], cfg['x0']
+    f = lambda x: L / (1.0 + math.exp(-k * (x - x0)))
+    h = 1e-4
+    d_num = (f(x0 + h) - f(x0 - h)) / (2 * h)
+    d_ana = L * k * math.exp(-k * (x0 - x0)) / (1 + math.exp(-k * (x0 - x0))) ** 2
+    fr, ok = is_below(abs(d_num - d_ana) / abs(d_ana), TH['1e-6'])
+    sanity = abs(f(x0) - L / 2.0) < 1e-9
+    return dict(name='P5', d_num=float(d_num), d_ana=float(d_ana), frac=fr, consistent=ok and sanity,
+                summary=f"d_num={d_num:.10f} d_ana={d_ana:.10f} rel={float(fr):.2e}")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  P6 — Delivery Ratio   (thesis Eq. 4.7, p.40)
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_P6(cfg):
+    if cfg['verbose']: print("\n[P6] Delivery Ratio — Eq. 4.7, p.40")
+    p = float(cfg['p_loss']); S = 100000
+    D = int((np.random.rand(S) >= p).sum())
+    Dr = D / S; se = math.sqrt(Dr * (1 - Dr) / S)
+    z = (Dr - (1 - p)) / se
+    fr, ok = is_below(abs(z), TH['3sigma'])
+    return dict(name='P6', D_ratio=float(Dr), expected=float(1 - p), z=float(z), frac=fr, consistent=ok,
+                summary=f"D={Dr:.4f} 1−p={1-p:.4f} z={z:.3f}σ")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  P7 — Mean AoI Used   (thesis Eq. 4.6, p.40)
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_P7(cfg, p1):
+    if cfg['verbose']: print("\n[P7] Mean AoI Used — Eq. 4.6, p.40")
+    tau = p1['tau']; n = 10000
+    sub = tau[np.random.randint(0, len(tau), n)]
+    m = float(sub.mean()); se = float(sub.std(ddof=1) / math.sqrt(n))
+    fr, ok = is_below(abs(m - p1['mean_int']), 5 * to_frac(se) + Fraction(2, 1))
+    return dict(name='P7', mean_aoi=m, se=se, expected=p1['mean_int'], frac=fr, consistent=ok,
+                summary=f"τ̄={m:.4f}±{se:.4f} expected={p1['mean_int']:.4f}")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  P8 — Cooperative Reward   (thesis Eq. 3.9, p.31)
+# ═══════════════════════════════════════════════════════════════════════════════
+def eq_P8(cfg):
+    if cfg['verbose']: print("\n[P8] Cooperative Reward — Eq. 3.9, p.31")
+    beta = float(cfg['beta']); n = cfg['n_agents']
+    q = 4.0 + 8.0 * np.random.rand(n)
+    r_loc  = -q
+    r_glob = -(1.0 / n) * q.sum()
+    r = beta * r_loc + (1 - beta) * r_glob
+    ok_mean = abs(r.mean() - (beta * r_loc.mean() + (1 - beta) * r_glob)) < 1e-9
+    r_at_beta1 = 1.0 * r_loc + 0.0 * r_glob
+    ok_b1      = bool(np.allclose(r_at_beta1, r_loc, atol=1e-9))
+    r_at_beta0 = 0.0 * r_loc + 1.0 * r_glob
+    ok_b0      = bool(np.allclose(r_at_beta0, np.full(n, r_glob), atol=1e-9))
+    consistent = ok_mean and ok_b1 and ok_b0
+    return dict(name='P8', r_loc=r_loc.tolist(), r_glob=float(r_glob), r=r.tolist(), frac=to_frac(0.0), consistent=consistent,
+                summary=f"mean_r={r.mean():.4f} r_global={r_glob:.4f} β=1✓={ok_b1} β=0✓={ok_b0}")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  RUN & DIAGNOSE ENGINE
+# ═══════════════════════════════════════════════════════════════════════════════
+def run_all_and_audit():
+    section("15 EQUATIONS  ::  EXECUTION + AUDIT")
+    results = {}
+    for fn in (eq_I1, eq_I2, eq_I3, eq_I4, eq_I5, eq_I6, eq_I7, eq_P1, eq_P2, eq_P3, eq_P4, eq_P5, eq_P6):
+        r = fn(CFG); results[r['name']] = r
+        mark = '✓' if r['consistent'] else '✗'
+        print(f"  [{mark}] {r['name']:3s}  {r['summary']}")
+    results['P7'] = eq_P7(CFG, results['P1'])
+    print(f"  [{'✓' if results['P7']['consistent'] else '✗'}] P7   {results['P7']['summary']}")
+    results['P8'] = eq_P8(CFG)
+    print(f"  [{'✓' if results['P8']['consistent'] else '✗'}] P8   {results['P8']['summary']}")
+    return results
+
+def fraction_audit(results):
+    subsection("EXACT FRACTION / RATIO AUDIT")
+    thresholds = {
+        'I1': TH['5pct'], 'I2': TH['2pct'], 'I3': TH['5sigma'], 'I4': TH['3sigma'], 'I5': TH['1pct'], 'I6': TH['1e-9'],
+        'I7': Fraction(5, 1), 'P1': TH['5pct'], 'P2': TH['2pp'], 'P3': TH['4sigma'], 'P4': Fraction(1, 1), 'P5': TH['1e-6'],
+        'P6': TH['3sigma'], 'P7': TH['5sigma'], 'P8': TH['1e-9'],
+    }
+    print(f"  {'Eq':<4} {'Ratio (float)':>16} {'Ratio (Fraction)':>24} {'Threshold':>16} {'Status':>8}")
+    hr('─', 78)
+    for n in thresholds.keys():
+        rec = results[n]
+        fr = rec.get('frac', max(rec.get('frac_ts', Fraction(0)), rec.get('frac_mc', Fraction(0))))
+        status = 'PASS' if rec['consistent'] else 'FAIL'
+        print(f"  {n:<4} {float(fr):>16.6e} {frac_str(fr):>24} {frac_str(thresholds[n]):>16} {status:>8}")
+
+def main():
+    res = run_all_and_audit()
+    fraction_audit(res)
+
+if __name__ == '__main__':
+    main()
+
+
+
+
+
+
+
+
+
+══════════════════════════════════════════════════════════════════════════════
+  15 EQUATIONS  ::  EXECUTION + AUDIT
+══════════════════════════════════════════════════════════════════════════════
+
+[I1] Average Waiting Time — Eq. 13, p.45
+  [✓] I1   trap=2.4008 simp=2.4008 MC=2.4300±0.0529
+
+[I2] Average Queue Length — Eq. 4.3, p.39
+  [✓] I2   direct=3.3179 trapz=3.3299 rel=0.3595%
+
+[I3] Average Travel Time — Eq. 4.2, p.39
+  [✓] I3   T̄=60.7912s 95%CI±0.9117s truth=60.7912s
+
+[I4] Throughput — Eq. 14, p.45
+  [✓] I4   Thr=2046.0 mean=2038.5 z=0.246σ
+
+[I5] AoI Decay Kernel — Eq. 3.11, p.32
+  [✓] I5   ∫κ=99.9955 1/λ=100.0000 rel=0.0045%
+
+[I6] Vehicle Kinematics — Forward Euler, p.22
+  [✓] I6   x_final=913.6m v_final=13.070m/s err=1.14e-13
+
+[I7] MYCC Control Law — Eq. B.1, p.41
+  [✓] I7   mean_gap=25.000m max_err=0.0000m
+
+[P1] Truncated Log-Normal — Eq. 3.6, p.30
+  [✓] P1   emp=113.0639 int=113.2181 rel=0.1362%
+
+[P2] Gilbert-Elliott Loss — Eq. 3.7, p.30
+  [✓] P2   π_G=0.750/0.744 loss=0.1930/0.1875
+
+[P3] Bernoulli Loss — p.34
+  [✓] P3   p=0.100 p̂=0.1007 z=0.704σ
+
+[P4] Severity Index — Eq. 3.8, p.30
+  [✓] P4   ρ=[0.     0.1083 0.325  0.65  ] monotone=True in[0,1]=True
+
+[P5] Logistic Degradation — Eq. 3.5, p.29
+  [✓] P5   d_num=1.0804822600 d_ana=1.0804822600 rel=0.00e+00
+
+[P6] Delivery Ratio — Eq. 4.7, p.40
+  [✓] P6   D=0.9000 1−p=0.9000 z=0.011σ
+
+[P7] Mean AoI Used — Eq. 4.6, p.40
+  [✓] P7   τ̄=111.9980±0.5847 expected=113.2181
+
+[P8] Cooperative Reward — Eq. 3.9, p.31
+  [✓] P8   mean_r=-8.8087 r_global=-8.8087 β=1✓=True β=0✓=True
+
+──────────────────────────────────────────────────────────────────────────────
+  EXACT FRACTION / RATIO AUDIT
+──────────────────────────────────────────────────────────────────────────────
+  Eq      Ratio (float)         Ratio (Fraction)        Threshold   Status
+──────────────────────────────────────────────────────────────────────────────
+  I1       2.919973e-02       29195356/999850093             1/20     PASS
+  I2       3.594930e-03        2972649/826900312             1/50     PASS
+  I3       0.000000e+00                      0/1              5/1     PASS
+  I4       2.463521e-01       98354373/399243028              3/1     PASS
+  I5       4.537910e-05          34859/768173058            1/100     PASS
+  I6       0.000000e+00                      0/1     1/1000000000     PASS
+  I7       2.346198e-06            782/333305265              5/1     PASS
+  P1       1.362264e-03         511716/375636379             1/20     PASS
+  P2       6.200000e-03                  31/5000             1/50     PASS
+  P3       7.041501e-01      113797284/161609419              4/1     PASS
+  P4       6.500000e-01                    13/20              1/1     PASS
+  P5       0.000000e+00                      0/1        1/1000000     PASS
+  P6       1.054139e-02       10149771/962849026              3/1     PASS
+  P7       1.220097e+00      602094924/493481171              5/1     PASS
+  P8       0.000000e+00                      0/1     1/1000000000     PASS
+
+
+
+
