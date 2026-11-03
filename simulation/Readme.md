@@ -10,8 +10,6 @@ This folder contains traffic replay and visualization tools. Their nullity handl
 
 ## Practical interpretation
 
-These behaviors let the tools continue when optional display helpers or individual malformed records are absent, while reporting some missing-file, empty-data, and unsupported-format conditions. A skipped record is not the same as a numeric zero: skipped input may reduce the data represented in a visualization or analysis. Check the console output and source data when completeness matters.
-
 The checks are format-specific. Some code paths still expect required JSON keys, valid numeric values, known road or intersection IDs, and nonempty geometry. The utilities do not guarantee that all null-like values (`null`, missing keys, empty strings, `NaN`, or `None`) are detected consistently. Validate input files before relying on results, and treat incomplete data as incomplete rather than silently interpreting it as zero.
 
 ## Related files
