@@ -1,30 +1,28 @@
-# 🚦 Traffic Intersection Visualizer
+# Null and Missing-Data Handling in Simulation Tools
 
-A professional, high‑performance visualization tool for traffic intersection simulations. Reads standard `roadnet.json` and `replay.txt` formats, generates publication‑ready static frames, and animates complete traffic flow with lane‑accurate traffic lights.
+This folder contains traffic replay and visualization tools. Their nullity handling is implemented as input checks, empty-data handling, and fallbacks for optional dependencies—not as a single shared null-value framework.
 
+## Existing behavior
 
----
+- **Replay parsing:** `frontend_replay/replay_simu.py` skips blank lines, lines without the expected `;` separator, and vehicle or traffic-light entries whose token counts do not match the expected format. A replay with no valid frames is reported and the visualizer exits rather than starting an empty animation.
+- **Optional packages:** visualization scripts guard imports of optional packages such as `tabulate` and `tqdm`. Missing `tabulate` falls back to plain console output; missing `tqdm` disables progress support.
+- **Analysis dependencies and data:** `frontend_replay/current/currnet.py` reports missing NumPy as a required dependency, disables SciPy-dependent model fitting when SciPy is absent, and disables plotting when Matplotlib is unavailable. Growth analysis returns an error result when a replay file cannot be read or contains no frames; streaming analysis reports when no usable data was parsed.
+- **Conversion inputs:** the grid converter recognizes several supported road-network JSON layouts and raises an explicit error for unrecognized layouts. Invalid flow JSON is caught and reported, an empty flow list is reported, and unrecognized or missing vehicle structures are skipped or reported.
+- **Missing routes and paths:** the grid replay skips flows with empty routes and warns or removes a vehicle when the required lane path is unavailable. Unmapped signal links are omitted from the rendered light data.
 
-## ✨ Features
+## Practical interpretation
 
-### 🎯 Core Visualization
+These behaviors let the tools continue when optional display helpers or individual malformed records are absent, while reporting some missing-file, empty-data, and unsupported-format conditions. A skipped record is not the same as a numeric zero: skipped input may reduce the data represented in a visualization or analysis. Check the console output and source data when completeness matters.
 
-* Accurate road geometry from `roadnet.json`
-* Solid outer lane edges and dashed lane dividers
-* Lane‑accurate traffic lights (R/G/Y per lane)
-* Detailed vehicles with headlights, taillights, and shadows
-* Stable vehicle colors across all frames
+The checks are format-specific. Some code paths still expect required JSON keys, valid numeric values, known road or intersection IDs, and nonempty geometry. The utilities do not guarantee that all null-like values (`null`, missing keys, empty strings, `NaN`, or `None`) are detected consistently. Validate input files before relying on results, and treat incomplete data as incomplete rather than silently interpreting it as zero.
 
-### 🚀 Performance
+## Related files
 
-* Blitted animation (static infrastructure drawn once)
-* 10–50× faster than full redraw approaches
-* Smooth playback with 1000+ frames
+- `frontend_replay/replay_simu.py` — replay and road-network parsing, record skipping, and empty-frame check.
+- `frontend_replay/current/currnet.py` — replay data ingestion and dependency/data availability handling.
+- `tools_generator_grid_replay/grid_data/grid_9_9/project/cityflow_to_sumo_converter.py` — supported input formats and JSON/flow handling.
+- `tools_generator_grid_replay/visu.py` — grid geometry and traffic-flow replay visualization.
 
-### 📊 Reporting & Export
+## Validation recommendations
 
-* Console summary tables (intersections, edges, lights)
-* High‑resolution static PNG (1800×1800)
-* Vector PDF export
-* Optional MP4 export (requires ffmpeg)
-
+For new inputs, verify file existence, JSON syntax, expected top-level shapes and required fields, numerical finiteness, and route/road references before simulation. When records are skipped, log counts and reasons so downstream summaries make the reduced coverage visible. Avoid replacing missing observations with zero unless zero is a valid measured value for that field.
