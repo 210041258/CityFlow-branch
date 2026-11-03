@@ -10,7 +10,7 @@
  *   cc -std=c99 -Wall -Wextra -pedantic -O2 -c cases-study/operational_factor_model.c -o operational_factor_model.o
  *
  * API functions are intentionally defined here so the file can be linked into
- * a larger application without a demo executable or third-party dependency.
+ * a larger application without third-party dependency.
  * Scores are descriptive only; they do not authorize access, rank individuals,
  * or establish causal effects. Example bounds are placeholders requiring local
  * review.
