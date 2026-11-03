@@ -1,49 +1,140 @@
-# Grid Traffic Replay: Theory and Practical Value
+# Grid Traffic Replay: Theory and Practical Benefits
 
 ## Purpose
 
-This folder demonstrates how a CityFlow road-network description and traffic-flow definitions can be converted into a visual replay. `roadnet_3_4.json` describes intersections, roads, lanes, and signal phases; `flow_3_4.json` describes vehicle types, routes, and injection intervals. `visu.py` parses these inputs, derives map geometry, advances a simplified traffic model, and renders vehicles and signal colors.
+This folder demonstrates a grid-traffic replay using `roadnet_3_4.json` and `flow_3_4.json`. The road-network file describes intersections, roads, lanes, and signal phases; the flow file describes vehicle properties, routes, and injection intervals. `visu.py` parses these inputs, builds map geometry, advances vehicle movement, and visualizes traffic and signal states.
 
 ## Core ideas
 
-Urban traffic simulation separates the **network model** from **traffic demand**. The road network defines connectivity and geometry, while flow records define where and when vehicles enter and which routes they follow. Keeping these inputs separate makes it easier to inspect a scenario and compare demand patterns without changing the map.
+Traffic simulation separates the **network model** from **traffic demand**. The network represents connectivity and geometry, while flow records specify where and when vehicles enter and which routes they follow. Keeping these inputs separate makes scenarios easier to inspect and vary.
 
-The visualizer maps network coordinates to road surfaces, lane boundaries, intersection outlines, and stop-line positions. It then animates vehicle positions along route edges and displays signal phases. This makes the structure and behavior of a scenario easier to communicate than raw JSON alone, and can help identify malformed routes, unexpected geometry, or signal-mapping mistakes.
+The visualizer turns the JSON definitions into a map with road surfaces, lane boundaries, intersection outlines, stop-line positions, vehicles, and signal colors. This connects the configuration to an understandable visual result and supports review of routes, geometry, and signal mappings.
 
 ## Practical benefits
 
-- **Scenario inspection:** view intersections, road edges, lane widths, routes, vehicle properties, and signal phases together.
-- **Debugging support:** check that flow routes correspond to road IDs and inspect how lane geometry and signal locations are rendered.
-- **Repeatable demonstrations:** use the bundled network and flow inputs to reproduce the same visualization setup.
-- **Communication:** generate a static PNG/PDF frame and optionally an MP4 animation for reports, teaching, or design discussions.
-- **Experiment preparation:** use the visualization to review input assumptions before running larger experiments in CityFlow.
+- Inspect intersections, road edges, lane widths, routes, vehicle properties, and signal phases together.
+- Review whether the configured flow routes match the road IDs in the network.
+- Visualize vehicle movement and signal states for demonstration, teaching, and discussion.
+- Generate static PNG/PDF frames and optionally an MP4 animation.
+- Reproduce the bundled scenario from the same road-network and flow inputs.
+- Review scenario inputs before running larger experiments with CityFlow.
 
 ## Run
 
-From this directory, install the required Python packages and launch the visualizer:
+From this directory:
 
 ```bash
 python -m pip install numpy matplotlib
 python visu.py --roadnet roadnet_3_4.json --flow flow_3_4.json
 ```
 
-Optional `tabulate` adds formatted console tables. MP4 export also requires FFmpeg:
+Optional `tabulate` provides formatted console tables; MP4 export requires FFmpeg:
 
 ```bash
 python -m pip install tabulate
-python visu.py --roadnet roadnet_3_4.json --flow flow_3_4.json --duration 60 --dt 0.1 --save --output replay
+python visu.py --roadnet roadnet_3_4.json --flow flow_3_4.json \
+  --duration 60 --dt 0.1 --save --output replay
 ```
 
-The main options are `--roadnet`, `--flow`, `--output`, `--duration`, `--dt`, `--interval`, and `--save`. Use `python visu.py --help` for the script's command-line help.
-
-## Scope and limitations
-
-The simulator inside `visu.py` is a lightweight visualization model with simplified vehicle movement, flow spawning, and signal handling. It is not the CityFlow engine, does not reproduce all CityFlow traffic dynamics, and is not calibrated to real-world traffic observations. Treat its output as an illustration of the provided inputs, not as measured performance or a validated prediction. For research conclusions, run the intended scenario in CityFlow, document configuration and seeds, and compare against appropriate baselines.
+Use `python visu.py --help` to see the available command-line options.
 
 ## References
 
-- Zhang, H. et al. “CityFlow: A Multi-Agent Reinforcement Learning Environment for Large Scale City Traffic Scenario.” *The World Wide Web Conference*, 2019. https://doi.org/10.1145/3308558.3314139
-- Lopez, P. A. et al. “Microscopic Traffic Simulation using SUMO.” *IEEE Intelligent Transportation Systems Conference*, 2018. https://doi.org/10.1109/ITSC.2018.8569938
-- Wei, H. et al. “PressLight: Learning Max Pressure Control to Coordinate Traffic Signals in Arterial Network.” *Proceedings of the 25th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining*, 2019. https://doi.org/10.1145/3292500.3330949
-- Wei, H. et al. “CoLight: Learning Network-level Cooperation for Traffic Signal Control.” *Proceedings of the 28th ACM International Conference on Information and Knowledge Management*, 2019. https://doi.org/10.1145/3357384.3357902
-- Wei, H. et al. “IntelliLight: A Reinforcement Learning Approach for Intelligent Traffic Light Control.” *Proceedings of the 24th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining*, 2018. https://doi.org/10.1145/3219819.3220096
+SocialLight: Distributed Cooperation Learning towardsNetwork-Wide Traffic Signal Control
+https://dl.acm.org/doi/epdf/10.5555/3545946.3598809
+
+CityFlow: A Multi-Agent Reinforcement Learning Environment for Large Scale City Traffic Scenario
+https://dl.acm.org/doi/pdf/10.1145/3308558.3314139
+
+IntelliLight: A Reinforcement Learning Approach for Intelligent Traffic Light Control
+https://doi.org/10.1145/3219819.3220096
+
+Multi-Agent Deep Reinforcement Learning for Large-Scale Traffic Signal Control
+https://doi.org/10.1109/TITS.2019.2913345
+
+Traffic Signal Timing via Deep Reinforcement Learning
+https://doi.org/10.1109/JAS.2016.7471730
+
+Multiagent Reinforcement Learning for Integrated Network of Adaptive Traffic Signal Controllers (MARLIN-ATSC): Methodology and Large-Scale Application on Downtown Toronto
+https://doi.org/10.1109/TITS.2013.2255288
+
+PressLight: Learning Max Pressure Control to Coordinate Traffic Signals in Arterial Network
+https://doi.org/10.1145/3292500.3330949
+
+CoLight: Learning Network-level Cooperation for Traffic Signal Control
+https://doi.org/10.1145/3357384.3357902
+
+Learning Phase Competition for Traffic Signal Control
+https://proceedings.mlr.press/v97/zheng19d.html
+
+Coordinated Deep Reinforcement Learners for Traffic Light Control
+https://arxiv.org/abs/1609.01120
+
+Using a Deep Reinforcement Learning Agent for Traffic Signal Control
+https://arxiv.org/abs/1611.01142
+
+An Experimental Review of Reinforcement Learning Algorithms for Adaptive Traffic Signal Control
+https://doi.org/10.1007/978-3-319-25808-9_3
+
+Traffic Signal Control Based on Reinforcement Learning with Graph Convolutional Neural Nets
+https://doi.org/10.1109/ACCESS.2020.2995771
+
+Multiagent Reinforcement Learning for Urban Traffic Control Using Coordination Graphs
+https://doi.org/10.1007/978-3-540-87479-9_62
+
+Simulation of Urban MObility (SUMO)
+https://doi.org/10.1109/MITS.2018.2876558
+
+Microscopic Traffic Simulation using SUMO
+https://doi.org/10.1109/ITSC.2012.6338689
+
+Multi-Agent Reinforcement Learning: A Critical Survey
+https://doi.org/10.1109/TSMCC.2008.2009436
+
+A Review of Urban Traffic Management: From Classical Methods to Reinforcement Learning and Swarm Intelligence
+https://doi.org/10.1109/TITS.2022.3143077
+
+Deep Reinforcement Learning Approaches for Urban Traffic Optimization: A Review
+https://doi.org/10.3390/s22093250
+
+Urban Traffic Control: An Overview
+https://doi.org/10.1109/ACCESS.2021.3118633
+
+Deep Learning for Short-Term Traffic Flow Prediction
+https://doi.org/10.1016/j.trc.2017.02.024
+
+Deep Reinforcement Learning for Traffic Signal Control: A Survey
+https://doi.org/10.1109/ACCESS.2020.2993358
+
+Hierarchical Reinforcement Learning for Traffic Signal Control
+https://doi.org/10.1109/ITSC.2019.8917468
+
+Adaptive Traffic Signal Control using Reinforcement Learning with Function Approximation
+https://doi.org/10.1109/ITSC.2016.7795656
+
+Large-Scale Multi-Agent Traffic Signal Control with DQN and Graph Neural Networks
+https://doi.org/10.1109/ITSC.2020.9294497
+
+A Survey of Reinforcement Learning for Traffic Signal Control
+https://doi.org/10.1109/TITS.2020.2999930
+
+Distributed Multi-Agent Reinforcement Learning for Traffic Signal Control
+https://doi.org/10.1109/ICASSP.2019.8682160
+
+Traffic Signal Control with Deep Q-Learning and Graph-Based State Representation
+https://doi.org/10.1109/ITSC.2021.9564476
+
+Urban Traffic Flow Prediction with Deep Learning: A Survey
+https://doi.org/10.1016/j.trc.2021.103290
+
+MAXPRESSURE Control for Signalized Intersections
+https://doi.org/10.3141/2259-03
+
+Modeling and Simulation of Urban Traffic Networks with Realistic Flow Patterns
+https://doi.org/10.1016/j.simpat.2018.04.002
+
+Reinforcement Learning Methods for Adaptive Traffic Signal Control: A Review
+https://doi.org/10.1109/OJITS.2022.3157413
+
+A Deep Learning Framework for Real-Time Urban Traffic Signal Control
+https://doi.org/10.1109/ITSC.2022.9914867
