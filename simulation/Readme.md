@@ -5,9 +5,7 @@ This folder contains traffic replay and visualization tools. Their nullity handl
 ## Existing behavior
 
 - **Replay parsing:** `frontend_replay/replay_simu.py` skips blank lines, lines without the expected `;` separator, and vehicle or traffic-light entries whose token counts do not match the expected format. A replay with no valid frames is reported and the visualizer exits rather than starting an empty animation.
-- **Optional packages:** visualization scripts guard imports of optional packages such as `tabulate` and `tqdm`. Missing `tabulate` falls back to plain console output; missing `tqdm` disables progress support.
 - **Analysis dependencies and data:** `frontend_replay/current/currnet.py` reports missing NumPy as a required dependency, disables SciPy-dependent model fitting when SciPy is absent, and disables plotting when Matplotlib is unavailable. Growth analysis returns an error result when a replay file cannot be read or contains no frames; streaming analysis reports when no usable data was parsed.
-- **Conversion inputs:** the grid converter recognizes several supported road-network JSON layouts and raises an explicit error for unrecognized layouts. Invalid flow JSON is caught and reported, an empty flow list is reported, and unrecognized or missing vehicle structures are skipped or reported.
 - **Missing routes and paths:** the grid replay skips flows with empty routes and warns or removes a vehicle when the required lane path is unavailable. Unmapped signal links are omitted from the rendered light data.
 
 ## Practical interpretation
