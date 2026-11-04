@@ -1,0 +1,55 @@
+{
+  "generated_at": "2026-11-04T09:32:06.760668",
+  "simulation_parameters": {
+    "duration": 600,
+    "time_step": 0.5,
+    "road_length": 100.0
+  },
+  "scenario_comparison": {
+    "peak_congestion_scenario": {
+      "scenario": "congestion",
+      "simulation_duration": 600.0,
+      "final_statistics": {
+        "total_vehicles": 62,
+        "average_speed": 5.177744087942792,
+        "total_waiting_time": 4006.0,
+        "congestion_level": 0.05961538461538462,
+        "roads_occupied": 52
+      },
+      "overall_statistics": {
+        "average_speed_over_time": 7.398169343928662,
+        "max_congestion_level": 0.05961538461538462,
+        "max_vehicles_simultaneously": 62,
+        "total_waiting_time_accumulated": 2562846.5
+      },
+      "traffic_signals": 52,
+      "vehicles_completed": 0
+    },
+    "emergency_traffic_scenario": {
+      "scenario": "emergency",
+      "simulation_duration": 1200.0,
+      "final_statistics": {
+        "total_vehicles": 62,
+        "average_speed": 9.008460110536681,
+        "total_waiting_time": 3144.0,
+        "congestion_level": 0.05849056603773585,
+        "roads_occupied": 53
+      },
+      "overall_statistics": {
+        "average_speed_over_time": 8.332147904843346,
+        "max_congestion_level": 0.05849056603773585,
+        "max_vehicles_simultaneously": 62,
+        "total_waiting_time_accumulated": 2196712.5
+      },
+      "traffic_signals": 52,
+      "vehicles_completed": 0
+    }
+  },
+  "conclusions": [
+    "Light traffic conditions with smooth flow",
+    "Emergency vehicles significantly impact traffic flow",
+    "Priority routing for emergency vehicles reduces response time",
+    "Other vehicles experience additional delays during emergency operations",
+    "Emergency management improves traffic flow compared to unmanaged congestion"
+  ]
+}
