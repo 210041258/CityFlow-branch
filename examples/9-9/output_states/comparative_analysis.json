@@ -1,45 +1,45 @@
 {
-  "generated_at": "2026-05-21T22:02:02.660658",
+  "generated_at": "2026-11-04T08:55:12.399694",
   "simulation_parameters": {
-    "duration": 600,
-    "time_step": 0.5,
+    "duration": 200,
+    "time_step": 1.0,
     "road_length": 100.0
   },
   "scenario_comparison": {
     "peak_congestion_scenario": {
       "scenario": "congestion",
-      "simulation_duration": 600.0,
+      "simulation_duration": 200.0,
       "final_statistics": {
         "total_vehicles": 45,
-        "average_speed": 6.381358434599114,
-        "total_waiting_time": 2964.5,
+        "average_speed": 9.928717811821336,
+        "total_waiting_time": 2658.0,
         "congestion_level": 0.0625,
         "roads_occupied": 36
       },
       "overall_statistics": {
-        "average_speed_over_time": 8.39856520146506,
+        "average_speed_over_time": 8.52552751213095,
         "max_congestion_level": 0.0625,
         "max_vehicles_simultaneously": 45,
-        "total_waiting_time_accumulated": 1899447.5
+        "total_waiting_time_accumulated": 274028.5
       },
       "traffic_signals": 36,
       "vehicles_completed": 0
     },
     "emergency_traffic_scenario": {
       "scenario": "emergency",
-      "simulation_duration": 1200.0,
+      "simulation_duration": 400.0,
       "final_statistics": {
         "total_vehicles": 46,
-        "average_speed": 9.24345444743492,
-        "total_waiting_time": 2318.0,
+        "average_speed": 5.732017948050315,
+        "total_waiting_time": 2433.5,
         "congestion_level": 0.062162162162162166,
         "roads_occupied": 37
       },
       "overall_statistics": {
-        "average_speed_over_time": 8.906899677421052,
+        "average_speed_over_time": 9.05747296695522,
         "max_congestion_level": 0.062162162162162166,
         "max_vehicles_simultaneously": 46,
-        "total_waiting_time_accumulated": 1605099.0
+        "total_waiting_time_accumulated": 250985.0
       },
       "traffic_signals": 36,
       "vehicles_completed": 0
@@ -50,6 +50,6 @@
     "Emergency vehicles significantly impact traffic flow",
     "Priority routing for emergency vehicles reduces response time",
     "Other vehicles experience additional delays during emergency operations",
-    "Emergency management improves traffic flow compared to unmanaged congestion"
+    "Emergency operations create additional disruptions to normal traffic"
   ]
 }
