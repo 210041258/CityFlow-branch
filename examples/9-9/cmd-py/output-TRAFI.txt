@@ -1,15 +1,13 @@
-& C:/Users/asdal/AppData/Local/Microsoft/WindowsApps/python3.13.exe C:\Users\asdal\Downloads\CityFlow-generated-001\examples\9-9\TRAFI.py --flow flow_9_9_turn.json --no-signals --export 
- --export                                                                                                                                                                                                                           
+
+C:\Users\albre\Downloads\CityFlow-branch-Cityflow\CityFlow-branch-Cityflow\examples\9-9>python trafi.py --flow flow_9_9_turn.json --no-signals --export
+
 ======================================================================
 🚗 TRAFI - Traffic Flow Simulator
 ======================================================================
-  File flow_9_9_turn.json found.
-   Using sample data instead.
-📝 Generating sample traffic flow data...
-✅ Generated 30 sample vehicles
+✅ Loaded flow data from
 
 🚗 TRAFI Simulator Initialized
-   • Vehicles: 30
+   • Vehicles: 44
    • Time step: 1.0s, Total steps: 300
    • Road length: 100.0m
    • Car-following model: IDM
@@ -19,8 +17,8 @@
 🚦 TRAFI SIMULATION STARTING
 ======================================================================
 
-Step 0: Running vehicles: 30, Avg speed: 0.50 m/s
-Step 50: Running vehicles: 15, Avg speed: 7.73 m/s
+Step 0: Running vehicles: 44, Avg speed: 4.56 m/s
+Step 50: Running vehicles: 44, Avg speed: 19.85 m/s
 Step 100: Running vehicles: 0, Avg speed: 0.00 m/s
 Step 150: Running vehicles: 0, Avg speed: 0.00 m/s
 Step 200: Running vehicles: 0, Avg speed: 0.00 m/s
@@ -30,38 +28,47 @@ Step 250: Running vehicles: 0, Avg speed: 0.00 m/s
 ✅ SIMULATION COMPLETED SUCCESSFULLY
 ======================================================================
 
-======================================================================
-TRAFI - TRAFFIC FLOW SIMULATION RESULTS
-======================================================================
+===========================================================================
+                  TRAFI - TRAFFIC FLOW SIMULATION RESULTS
+===========================================================================
 
 📊 PERFORMANCE METRICS
 ----------------------------------------
-  • Average travel time: -9.85 s
-  • Average speed: 16.72 m/s (60.2 km/h)
-  • Average delay: 3.46 s
-  • Average waiting time: 0.00 s
+  • Total Trips:                  44
+  • Avg Travel Time:           61.86 s
+  • Min / Max Travel:          53.00 /  98.00 s
+  • Std Dev (Travel):          15.75 s
+
+  • Avg Speed:                 18.47 m/s
+  • Avg Speed (km/h):          66.50 km/h
+  • Max Speed:                 69.68 km/h
+  • Std Dev (Speed):            0.49 m/s
 
 📈 THROUGHPUT & EFFICIENCY
 ----------------------------------------
-  • Total trips completed: 30
-  • Average trip distance: -0.16 km
-  • System efficiency: 135.1%
+  • Total Distance:            50.40 km
+  • System Efficiency:          92.1%
+  • Avg Delay:                  4.90 s
+  • Avg Waiting Time:           0.00 s
+  • Total Wait Time:            0.00 min
 
 🌱 ENVIRONMENTAL IMPACT
 ----------------------------------------
-  • Total fuel consumption: 0.30 liters
-  • Total CO2 emissions: 0.85 kg
-  • Average fuel per trip: 0.010 liters
-  • Average CO2 per trip: 0.028 kg
+  • Total Fuel:                 0.90 liters
+  • Fuel Consumption:           1.78 L/100km
+  • Total CO2:                  1.62 kg
+  • CO2 Emission Rate:          0.03 g/km
 
 ⏱️  SIMULATION STATISTICS
 ----------------------------------------
-  • Simulation runtime: 0.03 seconds
-  • Data points collected: 0
-======================================================================
+  • Runtime:                    0.03 sec
+  • Time Steps:                    0 (approx)
+===========================================================================
 
 💾 Results exported to:
-   • TRAFI_results_trajectories_20260308_153924.json
-   • TRAFI_results_statistics_20260308_153924.json
+   • TRAFI_results_trajectories_20261104_090414.json
+   • TRAFI_results_statistics_20261104_090414.json
 
 🎉 TRAFI simulation completed successfully!
+
+C:\Users\albre\Downloads\CityFlow-branch-Cityflow\CityFlow-branch-Cityflow\examples\9-9>
