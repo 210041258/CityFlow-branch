@@ -1,55 +1,54 @@
-PS C:\Users\asdal> & C:/Users/asdal/AppData/Local/Microsoft/WindowsApps/python3.13.exe "c:/Users/asdal/Downloads/CityFlow-generated-001-master/examples/Traffic Flow Simulator/TRAFI-Simulation.py"
+C:\Users\albre\Downloads\CityFlow-branch-Cityflow\CityFlow-branch-Cityflow\examples\3-4\Traffic Flow Simulator (trafic)>python TRAFI-Simulation.py --flow-file flow_3_4.json --output-dir ./output_states/
 ======================================================================
 TRAFI State Generator - Hard Scenario Analysis
 ======================================================================
-Error: File flow_3_4.json not found.
 
 ======================================================================
 Scenario: PEAK_CONGESTION_SCENARIO
 ======================================================================
 
 Running CONGESTION scenario for 200 seconds...
-Initialized 0 vehicles with congestion factor 0.5
-  Time: 1.0s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 51.0s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 101.0s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 151.0s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-Saved 200 states to output_states\peak_congestion_scenario_states.json
+Initialized 210 vehicles with congestion factor 0.5
+  Time: 1.0s | Vehicles: 15 | Avg Speed: 4.53m/s | Congestion: 0.05
+  Time: 51.0s | Vehicles: 15 | Avg Speed: 8.63m/s | Congestion: 0.05
+  Time: 101.0s | Vehicles: 15 | Avg Speed: 8.89m/s | Congestion: 0.05
+  Time: 151.0s | Vehicles: 15 | Avg Speed: 5.18m/s | Congestion: 0.05
+Saved 200 states to ./soutput_states/peak_congestion_scenario_states.json
 
-Report saved to: output_states\peak_congestion_scenario_report.json
-Visualization saved to: output_states\peak_congestion_scenario_analysis.png
+Report saved to: ./soutput_states/peak_congestion_scenario_report.json
+Visualization saved to: ./soutput_states/peak_congestion_scenario_analysis.png
 
 ======================================================================
 Scenario: EMERGENCY_TRAFFIC_SCENARIO
 ======================================================================
 
 Running EMERGENCY scenario for 200 seconds...
-Initialized 0 vehicles with congestion factor 1.0
+Initialized 112 vehicles with congestion factor 1.0
 Added 2 emergency vehicles
-  Time: 201.0s | Vehicles: 2 | Avg Speed: 21.77m/s | Congestion: 0.05
-  Time: 251.0s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 301.0s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 351.0s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-Saved 200 states to output_states\emergency_traffic_scenario_states.json
+  Time: 201.0s | Vehicles: 16 | Avg Speed: 6.69m/s | Congestion: 0.06
+  Time: 251.0s | Vehicles: 16 | Avg Speed: 8.33m/s | Congestion: 0.06
+  Time: 301.0s | Vehicles: 16 | Avg Speed: 9.08m/s | Congestion: 0.06
+  Time: 351.0s | Vehicles: 16 | Avg Speed: 11.46m/s | Congestion: 0.06
+Saved 200 states to ./soutput_states/emergency_traffic_scenario_states.json
 
-Report saved to: output_states\emergency_traffic_scenario_report.json
-Visualization saved to: output_states\emergency_traffic_scenario_analysis.png
+Report saved to: ./soutput_states/emergency_traffic_scenario_report.json
+Visualization saved to: ./soutput_states/emergency_traffic_scenario_analysis.png
 
-Comparative analysis: output_states\comparative_analysis.json
+Comparative analysis: ./soutput_states/comparative_analysis.json
 
 ======================================================================
 ANALYSIS COMPLETE
 ======================================================================
-All results saved to: output_states/
+All results saved to: ./soutput_states//
 
 KEY FINDINGS:
 
 PEAK_CONGESTION_SCENARIO:
-  • Final congestion level: 0.00
-  • Average speed: 0.00 m/s
-  • Total vehicles: 0
+  • Final congestion level: 0.05
+  • Average speed: 7.74 m/s
+  • Total vehicles: 15
 
 EMERGENCY_TRAFFIC_SCENARIO:
-  • Final congestion level: 0.05
-  • Average speed: 25.00 m/s
-  • Total vehicles: 2
+  • Final congestion level: 0.06
+  • Average speed: 8.49 m/s
+  • Total vehicles: 16
