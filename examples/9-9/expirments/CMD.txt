@@ -1,11 +1,11 @@
-----------------------------------------------------------------------------------------------------
 
-& C:\Users\asdal\AppData\Local\Microsoft\WindowsApps\python3.13.exe c:/Users/asdal/Downloads/CityFlow-generated-001/examples/9-9/TRAFI.py --flow flow_9_9_turn.json --steps 550 --dt 0.35 --road-length 190 --model GIPPS  --visualize --export
+
+C:\Users\albre\Downloads\CityFlow-branch-Cityflow\CityFlow-branch-Cityflow\examples\9-9>python trafi.py  --flow flow_9_9_turn.json --steps 550 --dt 0.35 --road-length 190 --model GIPPS  --visualize --export
 
 ======================================================================
 🚗 TRAFI - Traffic Flow Simulator
 ======================================================================
-✅ Loaded flow data from 
+✅ Loaded flow data from
 
 🚗 TRAFI Simulator Initialized
    • Vehicles: 44
@@ -18,43 +18,43 @@
 🚦 TRAFI SIMULATION STARTING
 ======================================================================
 
-Step 0: Running vehicles: 44, Avg speed: 4.24 m/s
-Step 50: Running vehicles: 44, Avg speed: 19.60 m/s
+Step 0: Running vehicles: 44, Avg speed: 4.19 m/s
+Step 50: Running vehicles: 44, Avg speed: 19.58 m/s
 Step 100: Running vehicles: 44, Avg speed: 20.10 m/s
 Step 150: Running vehicles: 44, Avg speed: 20.11 m/s
 Step 200: Running vehicles: 44, Avg speed: 20.11 m/s
-Step 250: Running vehicles: 44, Avg speed: 19.22 m/s
-Step 300: Running vehicles: 9, Avg speed: 18.97 m/s
-Step 350: Running vehicles: 8, Avg speed: 20.09 m/s
+Step 250: Running vehicles: 44, Avg speed: 19.19 m/s
+Step 300: Running vehicles: 8, Avg speed: 17.62 m/s
+Step 350: Running vehicles: 8, Avg speed: 20.08 m/s
 Step 400: Running vehicles: 8, Avg speed: 20.11 m/s
 Step 450: Running vehicles: 8, Avg speed: 20.11 m/s
-Step 500: Running vehicles: 5, Avg speed: 20.11 m/s
+Step 500: Running vehicles: 6, Avg speed: 20.11 m/s
 
 ======================================================================
 ✅ SIMULATION COMPLETED SUCCESSFULLY
 ======================================================================
 
 ===========================================================================
-                  TRAFI - TRAFFIC FLOW SIMULATION RESULTS                  
+                  TRAFI - TRAFFIC FLOW SIMULATION RESULTS
 ===========================================================================
 
 📊 PERFORMANCE METRICS
 ----------------------------------------
   • Total Trips:                  44
-  • Avg Travel Time:          114.77 s
+  • Avg Travel Time:          115.11 s
   • Min / Max Travel:          98.70 / 189.35 s
-  • Std Dev (Travel):          30.80 s
+  • Std Dev (Travel):          31.57 s
 
-  • Avg Speed:                 18.96 m/s
-  • Avg Speed (km/h):          68.27 km/h
+  • Avg Speed:                 18.93 m/s
+  • Avg Speed (km/h):          68.15 km/h
   • Max Speed:                 70.78 km/h
-  • Std Dev (Speed):            0.42 m/s
+  • Std Dev (Speed):            0.43 m/s
 
 📈 THROUGHPUT & EFFICIENCY
 ----------------------------------------
   • Total Distance:            95.76 km
-  • System Efficiency:          94.3%
-  • Avg Delay:                  6.54 s
+  • System Efficiency:          94.0%
+  • Avg Delay:                  6.88 s
   • Avg Waiting Time:           0.00 s
   • Total Wait Time:            0.00 min
 
@@ -62,41 +62,29 @@ Step 500: Running vehicles: 5, Avg speed: 20.11 m/s
 ----------------------------------------
   • Total Fuel:                 1.65 liters
   • Fuel Consumption:           1.72 L/100km
-  • Total CO2:                  2.97 kg
+  • Total CO2:                  2.99 kg
   • CO2 Emission Rate:          0.03 g/km
 
 ⏱️  SIMULATION STATISTICS
 ----------------------------------------
-  • Runtime:                    0.17 sec
+  • Runtime:                    0.10 sec
   • Time Steps:                    0 (approx)
 ===========================================================================
 
 📈 Generating visualization dashboard...
 
 💾 Results exported to:
-   • TRAFI_results_trajectories_20260603_031013.json
-   • TRAFI_results_statistics_20260603_031013.json
+   • TRAFI_results_trajectories_20261104_090645.json
+   • TRAFI_results_statistics_20261104_090645.json
 
 🎉 TRAFI simulation completed successfully!
 
-
-
-
-
-
-
-----------------------------------------------------------------------------------------------------
-
-
-
-
-
-PS C:\Users\asdal> & C:\Users\asdal\AppData\Local\Microsoft\WindowsApps\python3.13.exe c:/Users/asdal/Downloads/CityFlow-generated-001/examples/9-9/TRAFI.py --flow flow_9_9_turn.json --steps 550 --dt 0.35 --road-length 190 --model IDM  --visualize --export  
+C:\Users\albre\Downloads\CityFlow-branch-Cityflow\CityFlow-branch-Cityflow\examples\9-9>python trafi.py  --flow flow_9_9_turn.json --steps 550 --dt 0.35 --road-length 190 --model IDM  --visualize --export
 
 ======================================================================
 🚗 TRAFI - Traffic Flow Simulator
 ======================================================================
-✅ Loaded flow data from 
+✅ Loaded flow data from
 
 🚗 TRAFI Simulator Initialized
    • Vehicles: 44
@@ -109,43 +97,43 @@ PS C:\Users\asdal> & C:\Users\asdal\AppData\Local\Microsoft\WindowsApps\python3.
 🚦 TRAFI SIMULATION STARTING
 ======================================================================
 
-Step 0: Running vehicles: 44, Avg speed: 3.93 m/s
-Step 50: Running vehicles: 44, Avg speed: 19.88 m/s
+Step 0: Running vehicles: 44, Avg speed: 3.87 m/s
+Step 50: Running vehicles: 44, Avg speed: 19.86 m/s
 Step 100: Running vehicles: 44, Avg speed: 20.11 m/s
 Step 150: Running vehicles: 44, Avg speed: 20.11 m/s
 Step 200: Running vehicles: 44, Avg speed: 20.11 m/s
 Step 250: Running vehicles: 44, Avg speed: 19.86 m/s
-Step 300: Running vehicles: 8, Avg speed: 20.02 m/s
+Step 300: Running vehicles: 8, Avg speed: 19.97 m/s
 Step 350: Running vehicles: 8, Avg speed: 20.11 m/s
 Step 400: Running vehicles: 8, Avg speed: 20.11 m/s
 Step 450: Running vehicles: 8, Avg speed: 20.11 m/s
-Step 500: Running vehicles: 5, Avg speed: 20.11 m/s
+Step 500: Running vehicles: 6, Avg speed: 20.11 m/s
 
 ======================================================================
 ✅ SIMULATION COMPLETED SUCCESSFULLY
 ======================================================================
 
 ===========================================================================
-                  TRAFI - TRAFFIC FLOW SIMULATION RESULTS                  
+                  TRAFI - TRAFFIC FLOW SIMULATION RESULTS
 ===========================================================================
 
 📊 PERFORMANCE METRICS
 ----------------------------------------
   • Total Trips:                  44
-  • Avg Travel Time:          113.19 s
+  • Avg Travel Time:          113.29 s
   • Min / Max Travel:          98.00 / 179.20 s
-  • Std Dev (Travel):          29.65 s
+  • Std Dev (Travel):          29.83 s
 
-  • Avg Speed:                 19.20 m/s
-  • Avg Speed (km/h):          69.13 km/h
+  • Avg Speed:                 19.19 m/s
+  • Avg Speed (km/h):          69.09 km/h
   • Max Speed:                 70.92 km/h
-  • Std Dev (Speed):            0.28 m/s
+  • Std Dev (Speed):            0.27 m/s
 
 📈 THROUGHPUT & EFFICIENCY
 ----------------------------------------
   • Total Distance:            95.76 km
-  • System Efficiency:          95.6%
-  • Avg Delay:                  4.96 s
+  • System Efficiency:          95.5%
+  • Avg Delay:                  5.06 s
   • Avg Waiting Time:           0.00 s
   • Total Wait Time:            0.00 min
 
@@ -153,35 +141,29 @@ Step 500: Running vehicles: 5, Avg speed: 20.11 m/s
 ----------------------------------------
   • Total Fuel:                 1.64 liters
   • Fuel Consumption:           1.71 L/100km
-  • Total CO2:                  2.88 kg
+  • Total CO2:                  2.89 kg
   • CO2 Emission Rate:          0.03 g/km
 
 ⏱️  SIMULATION STATISTICS
 ----------------------------------------
-  • Runtime:                    0.13 sec
+  • Runtime:                    0.10 sec
   • Time Steps:                    0 (approx)
 ===========================================================================
 
 📈 Generating visualization dashboard...
 
 💾 Results exported to:
-   • TRAFI_results_trajectories_20260603_031145.json
-   • TRAFI_results_statistics_20260603_031145.json
+   • TRAFI_results_trajectories_20261104_090716.json
+   • TRAFI_results_statistics_20261104_090716.json
 
 🎉 TRAFI simulation completed successfully!
 
-
-----------------------------------------------------------------------------------------------------
-
-
-
-& C:\Users\asdal\AppData\Local\Microsoft\WindowsApps\python3.13.exe c:/Users/asdal/Downloads/CityFlow-generated-001/examples/9-9/TRAFI.py --flow flow_9_9_turn.json --steps 550 --dt 0.35 --road-length 190 --model SAFE  --visualize --export
-l SAFE  --visualize --export
+C:\Users\albre\Downloads\CityFlow-branch-Cityflow\CityFlow-branch-Cityflow\examples\9-9>python trafi.py --flow flow_9_9_turn.json --steps 550 --dt 0.35 --road-length 190 --model SAFE  --visualize --export
 
 ======================================================================
 🚗 TRAFI - Traffic Flow Simulator
 ======================================================================
-✅ Loaded flow data from 
+✅ Loaded flow data from
 
 🚗 TRAFI Simulator Initialized
    • Vehicles: 44
@@ -194,13 +176,13 @@ l SAFE  --visualize --export
 🚦 TRAFI SIMULATION STARTING
 ======================================================================
 
-Step 0: Running vehicles: 44, Avg speed: 3.93 m/s
+Step 0: Running vehicles: 44, Avg speed: 3.88 m/s
 Step 50: Running vehicles: 44, Avg speed: 20.10 m/s
 Step 100: Running vehicles: 44, Avg speed: 20.11 m/s
 Step 150: Running vehicles: 44, Avg speed: 20.11 m/s
 Step 200: Running vehicles: 44, Avg speed: 20.11 m/s
-Step 250: Running vehicles: 44, Avg speed: 20.11 m/s
-Step 300: Running vehicles: 8, Avg speed: 20.08 m/s
+Step 250: Running vehicles: 44, Avg speed: 20.01 m/s
+Step 300: Running vehicles: 8, Avg speed: 20.11 m/s
 Step 350: Running vehicles: 8, Avg speed: 20.11 m/s
 Step 400: Running vehicles: 8, Avg speed: 20.11 m/s
 Step 450: Running vehicles: 8, Avg speed: 20.11 m/s
@@ -211,26 +193,26 @@ Step 500: Running vehicles: 1, Avg speed: 20.11 m/s
 ======================================================================
 
 ===========================================================================
-                  TRAFI - TRAFFIC FLOW SIMULATION RESULTS                  
+                  TRAFI - TRAFFIC FLOW SIMULATION RESULTS
 ===========================================================================
 
 📊 PERFORMANCE METRICS
 ----------------------------------------
   • Total Trips:                  44
-  • Avg Travel Time:          112.39 s
-  • Min / Max Travel:          97.65 / 177.10 s
-  • Std Dev (Travel):          29.09 s
+  • Avg Travel Time:          112.29 s
+  • Min / Max Travel:          97.65 / 175.70 s
+  • Std Dev (Travel):          28.94 s
 
-  • Avg Speed:                 19.33 m/s
-  • Avg Speed (km/h):          69.58 km/h
-  • Max Speed:                 71.06 km/h
-  • Std Dev (Speed):            0.27 m/s
+  • Avg Speed:                 19.34 m/s
+  • Avg Speed (km/h):          69.62 km/h
+  • Max Speed:                 71.21 km/h
+  • Std Dev (Speed):            0.25 m/s
 
 📈 THROUGHPUT & EFFICIENCY
 ----------------------------------------
   • Total Distance:            95.76 km
-  • System Efficiency:          96.3%
-  • Avg Delay:                  4.16 s
+  • System Efficiency:          96.4%
+  • Avg Delay:                  4.07 s
   • Avg Waiting Time:           0.00 s
   • Total Wait Time:            0.00 min
 
@@ -243,20 +225,16 @@ Step 500: Running vehicles: 1, Avg speed: 20.11 m/s
 
 ⏱️  SIMULATION STATISTICS
 ----------------------------------------
-  • Runtime:                    0.09 sec
+  • Runtime:                    0.07 sec
   • Time Steps:                    0 (approx)
 ===========================================================================
 
 📈 Generating visualization dashboard...
 
 💾 Results exported to:
-   • TRAFI_results_trajectories_20260603_031349.json
-   • TRAFI_results_statistics_20260603_031349.json
+   • TRAFI_results_trajectories_20261104_090747.json
+   • TRAFI_results_statistics_20261104_090747.json
 
 🎉 TRAFI simulation completed successfully!
 
-
-
-
-
-----------------------------------------------------------------------------------------------------
+C:\Users\albre\Downloads\CityFlow-branch-Cityflow\CityFlow-branch-Cityflow\examples\9-9>
