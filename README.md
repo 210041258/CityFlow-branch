@@ -24,7 +24,7 @@ The repository mixes official simulator components with experimental Python modu
 - `tests/` — test scaffolding and C++/Python test configuration
 - `docs/` — Sphinx documentation structure
 - `HOW_TO_RUN.md` — installation and usage instructions
-- `setup.py`, `CMakeLists.txt`, `Dockerfile` — build and packaging configuration
+- `setup.py`, `CMakeLists.txt` — build and packaging configuration
 
 ## Implemented simulator and tooling
 
@@ -48,18 +48,6 @@ The frontend includes the replay viewer workflow:
 - `simulation/Readme.md` describes a separate traffic intersection visualizer for `roadnet.json` and `replay.txt` inputs
 
 These tools are present in the repository and are part of the implemented visualization surface.
-
-### Simulation visualizer
-
-`simulation/Readme.md` describes a visualization tool with features such as:
-
-- accurate road geometry and lane markings,
-- signal display by lane and direction,
-- vehicle rendering and stable colors,
-- high-resolution static export,
-- vector PDF export,
-- optional MP4 export via ffmpeg,
-- and a blitted rendering pipeline designed for performance.
 
 This is implemented as a documented visual analysis utility rather than a general-purpose traffic controller.
 
@@ -94,8 +82,6 @@ This module defines action encodings for traffic signal control:
 
 It includes:
 
-- validation logic,
-- sample generation,
 - action masking,
 - mode conversion helpers,
 - and metrics for action-space usage.
@@ -218,11 +204,10 @@ The repository includes:
 
 ## Important interpretation
 
-The repository contains both the real CityFlow simulator and a number of Python-only experimental modules. The implemented code should be interpreted as follows:
+The repository contains both the real CityFlow simulator and a number of Python experimental modules. The implemented code should be interpreted as follows:
 
 - The core CityFlow engine and frontend are part of the repository.
 - The `cityflow_features` pipeline is a self-contained traffic-signal experimentation stack implemented in Python.
-- The default environment used by those feature modules is a mock simulator, not a validated benchmark of real CityFlow roads.
 - The case-study scripts are implemented experiment drivers and models, not guaranteed deployment-ready traffic-control solutions.
 - The presence of a metric, scenario, or experiment script does not by itself establish that the approach is proven to outperform other controllers.
 
@@ -252,6 +237,3 @@ python cityflow_features/run.py --training-env --num-intersections 5 --steps 50 
 python cases-study/scenario_matrix.py --seeds 3 --steps 80
 ```
 
-## Summary
-
-This repository is not just a simulator; it also contains a Python feature environment, case-study experimentation, and multiple signal-control abstractions. The implemented codebase demonstrates a full stack of simulation, visualization, mock RL training, scenario modeling, and evaluation tooling, but it should be read as a collection of implemented components with varying maturity and validation status.
