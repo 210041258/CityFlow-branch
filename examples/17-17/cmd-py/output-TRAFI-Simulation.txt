@@ -1,39 +1,41 @@
-PS C:\Users\asdal> & C:/Users/asdal/AppData/Local/Microsoft/WindowsApps/python3.13.exe C:\Users\asdal\Downloads\CityFlow-generated-001\examples\17-17\TRAFI-Simulation.py  --flow-file flow_17_17_turn.json --duration 600 --dt 0.5                       
+
+
+
+C:\Users\albre\Downloads\CityFlow-branch-Cityflow\CityFlow-branch-Cityflow\examples\17-17>python TRAFI-Simulation.py   --flow-file flow_17_17_turn.json --duration 600 --dt 0.5
 ======================================================================
 TRAFI State Generator - Hard Scenario Analysis
 ======================================================================
-Error: File flow_17_17_turn.json not found.
 
 ======================================================================
 Scenario: PEAK_CONGESTION_SCENARIO
 ======================================================================
 
 Running CONGESTION scenario for 600 seconds...
-Initialized 0 vehicles with congestion factor 0.5
-  Time: 0.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 25.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 50.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 75.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 100.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 125.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 150.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 175.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 200.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 225.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 250.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 275.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 300.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 325.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 350.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 375.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 400.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 425.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 450.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 475.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 500.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 525.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 550.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
-  Time: 575.5s | Vehicles: 0 | Avg Speed: 0.00m/s | Congestion: 0.00
+Initialized 1140 vehicles with congestion factor 0.5
+  Time: 0.5s | Vehicles: 78 | Avg Speed: 3.30m/s | Congestion: 0.06
+  Time: 25.5s | Vehicles: 78 | Avg Speed: 4.64m/s | Congestion: 0.06
+  Time: 50.5s | Vehicles: 78 | Avg Speed: 7.53m/s | Congestion: 0.06
+  Time: 75.5s | Vehicles: 78 | Avg Speed: 8.26m/s | Congestion: 0.06
+  Time: 100.5s | Vehicles: 78 | Avg Speed: 8.01m/s | Congestion: 0.06
+  Time: 125.5s | Vehicles: 78 | Avg Speed: 4.63m/s | Congestion: 0.06
+  Time: 150.5s | Vehicles: 78 | Avg Speed: 4.81m/s | Congestion: 0.06
+  Time: 175.5s | Vehicles: 78 | Avg Speed: 7.83m/s | Congestion: 0.06
+  Time: 200.5s | Vehicles: 78 | Avg Speed: 8.38m/s | Congestion: 0.06
+  Time: 225.5s | Vehicles: 78 | Avg Speed: 8.01m/s | Congestion: 0.06
+  Time: 250.5s | Vehicles: 78 | Avg Speed: 4.49m/s | Congestion: 0.06
+  Time: 275.5s | Vehicles: 78 | Avg Speed: 6.44m/s | Congestion: 0.06
+  Time: 300.5s | Vehicles: 78 | Avg Speed: 7.95m/s | Congestion: 0.06
+  Time: 325.5s | Vehicles: 78 | Avg Speed: 8.42m/s | Congestion: 0.06
+  Time: 350.5s | Vehicles: 78 | Avg Speed: 8.01m/s | Congestion: 0.06
+  Time: 375.5s | Vehicles: 78 | Avg Speed: 6.08m/s | Congestion: 0.06
+  Time: 400.5s | Vehicles: 78 | Avg Speed: 7.56m/s | Congestion: 0.06
+  Time: 425.5s | Vehicles: 78 | Avg Speed: 7.99m/s | Congestion: 0.06
+  Time: 450.5s | Vehicles: 78 | Avg Speed: 8.44m/s | Congestion: 0.06
+  Time: 475.5s | Vehicles: 78 | Avg Speed: 6.14m/s | Congestion: 0.06
+  Time: 500.5s | Vehicles: 78 | Avg Speed: 7.13m/s | Congestion: 0.06
+  Time: 525.5s | Vehicles: 78 | Avg Speed: 8.09m/s | Congestion: 0.06
+  Time: 550.5s | Vehicles: 78 | Avg Speed: 8.01m/s | Congestion: 0.06
+  Time: 575.5s | Vehicles: 78 | Avg Speed: 6.14m/s | Congestion: 0.06
 Saved 1200 states to output_states\peak_congestion_scenario_states.json
 
 Report saved to: output_states\peak_congestion_scenario_report.json
@@ -44,32 +46,32 @@ Scenario: EMERGENCY_TRAFFIC_SCENARIO
 ======================================================================
 
 Running EMERGENCY scenario for 600 seconds...
-Initialized 0 vehicles with congestion factor 1.0
+Initialized 608 vehicles with congestion factor 1.0
 Added 2 emergency vehicles
-  Time: 600.5s | Vehicles: 2 | Avg Speed: 20.89m/s | Congestion: 0.05
-  Time: 625.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 650.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 675.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 700.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 725.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 750.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 775.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 800.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 825.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 850.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 875.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 900.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 925.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 950.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 975.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 1000.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 1025.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 1050.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 1075.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 1100.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 1125.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 1150.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
-  Time: 1175.5s | Vehicles: 2 | Avg Speed: 25.00m/s | Congestion: 0.05
+  Time: 600.5s | Vehicles: 78 | Avg Speed: 3.79m/s | Congestion: 0.06
+  Time: 625.5s | Vehicles: 78 | Avg Speed: 8.02m/s | Congestion: 0.06
+  Time: 650.5s | Vehicles: 78 | Avg Speed: 8.01m/s | Congestion: 0.06
+  Time: 675.5s | Vehicles: 78 | Avg Speed: 7.75m/s | Congestion: 0.06
+  Time: 700.5s | Vehicles: 78 | Avg Speed: 7.14m/s | Congestion: 0.06
+  Time: 725.5s | Vehicles: 78 | Avg Speed: 8.02m/s | Congestion: 0.06
+  Time: 750.5s | Vehicles: 78 | Avg Speed: 8.02m/s | Congestion: 0.06
+  Time: 775.5s | Vehicles: 78 | Avg Speed: 7.74m/s | Congestion: 0.06
+  Time: 800.5s | Vehicles: 78 | Avg Speed: 5.62m/s | Congestion: 0.06
+  Time: 825.5s | Vehicles: 78 | Avg Speed: 8.02m/s | Congestion: 0.06
+  Time: 850.5s | Vehicles: 78 | Avg Speed: 8.02m/s | Congestion: 0.06
+  Time: 875.5s | Vehicles: 78 | Avg Speed: 8.00m/s | Congestion: 0.06
+  Time: 900.5s | Vehicles: 78 | Avg Speed: 5.58m/s | Congestion: 0.06
+  Time: 925.5s | Vehicles: 78 | Avg Speed: 7.26m/s | Congestion: 0.06
+  Time: 950.5s | Vehicles: 78 | Avg Speed: 8.02m/s | Congestion: 0.06
+  Time: 975.5s | Vehicles: 78 | Avg Speed: 8.00m/s | Congestion: 0.06
+  Time: 1000.5s | Vehicles: 78 | Avg Speed: 7.73m/s | Congestion: 0.06
+  Time: 1025.5s | Vehicles: 78 | Avg Speed: 7.18m/s | Congestion: 0.06
+  Time: 1050.5s | Vehicles: 78 | Avg Speed: 8.02m/s | Congestion: 0.06
+  Time: 1075.5s | Vehicles: 78 | Avg Speed: 8.02m/s | Congestion: 0.06
+  Time: 1100.5s | Vehicles: 78 | Avg Speed: 7.72m/s | Congestion: 0.06
+  Time: 1125.5s | Vehicles: 78 | Avg Speed: 5.51m/s | Congestion: 0.06
+  Time: 1150.5s | Vehicles: 78 | Avg Speed: 8.02m/s | Congestion: 0.06
+  Time: 1175.5s | Vehicles: 78 | Avg Speed: 8.02m/s | Congestion: 0.06
 Saved 1200 states to output_states\emergency_traffic_scenario_states.json
 
 Report saved to: output_states\emergency_traffic_scenario_report.json
@@ -85,11 +87,12 @@ All results saved to: output_states/
 KEY FINDINGS:
 
 PEAK_CONGESTION_SCENARIO:
-  • Final congestion level: 0.00
-  • Average speed: 0.00 m/s
-  • Total vehicles: 0
+  • Final congestion level: 0.06
+  • Average speed: 4.54 m/s
+  • Total vehicles: 78
 
 EMERGENCY_TRAFFIC_SCENARIO:
-  • Final congestion level: 0.05
-  • Average speed: 25.00 m/s
-  • Total vehicles: 2
+  • Final congestion level: 0.06
+  • Average speed: 8.00 m/s
+  • Total vehicles: 78
+
