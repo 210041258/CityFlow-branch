@@ -1,0 +1,55 @@
+{
+  "generated_at": "2026-11-04T09:59:28.597190",
+  "simulation_parameters": {
+    "duration": 200,
+    "time_step": 1.0,
+    "road_length": 100.0
+  },
+  "scenario_comparison": {
+    "peak_congestion_scenario": {
+      "scenario": "congestion",
+      "simulation_duration": 200.0,
+      "final_statistics": {
+        "total_vehicles": 15,
+        "average_speed": 7.716339141516122,
+        "total_waiting_time": 894.5,
+        "congestion_level": 0.05357142857142857,
+        "roads_occupied": 14
+      },
+      "overall_statistics": {
+        "average_speed_over_time": 7.452740146456462,
+        "max_congestion_level": 0.05357142857142857,
+        "max_vehicles_simultaneously": 15,
+        "total_waiting_time_accumulated": 93631.5
+      },
+      "traffic_signals": 14,
+      "vehicles_completed": 0
+    },
+    "emergency_traffic_scenario": {
+      "scenario": "emergency",
+      "simulation_duration": 400.0,
+      "final_statistics": {
+        "total_vehicles": 16,
+        "average_speed": 7.259759996689279,
+        "total_waiting_time": 667.5,
+        "congestion_level": 0.05714285714285714,
+        "roads_occupied": 14
+      },
+      "overall_statistics": {
+        "average_speed_over_time": 8.527619300886581,
+        "max_congestion_level": 0.05714285714285714,
+        "max_vehicles_simultaneously": 16,
+        "total_waiting_time_accumulated": 68056.0
+      },
+      "traffic_signals": 14,
+      "vehicles_completed": 0
+    }
+  },
+  "conclusions": [
+    "Light traffic conditions with smooth flow",
+    "Emergency vehicles significantly impact traffic flow",
+    "Priority routing for emergency vehicles reduces response time",
+    "Other vehicles experience additional delays during emergency operations",
+    "Emergency operations create additional disruptions to normal traffic"
+  ]
+}
