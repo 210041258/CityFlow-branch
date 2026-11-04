@@ -1,54 +1,65 @@
-C:\Users\albre\Downloads\CityFlow-branch-Cityflow\CityFlow-branch-Cityflow\examples\3-4\Traffic Flow Simulator (trafic)>python TRAFI-Simulation.py --flow-file flow_3_4.json --output-dir ./output_states/
-======================================================================
-TRAFI State Generator - Hard Scenario Analysis
-======================================================================
+
+C:\Users\albre\Downloads\CityFlow-branch-Cityflow\CityFlow-branch-Cityflow\examples\3-4\Traffic Flow Simulator (trafic)>python trafi.py --flow flow_3_4.json --steps 500 --dt 0.5 --model IDM
 
 ======================================================================
-Scenario: PEAK_CONGESTION_SCENARIO
+🚗 TRAFI - Traffic Flow Simulator
 ======================================================================
+✅ Loaded flow data from flow_3_4.json
 
-Running CONGESTION scenario for 200 seconds...
-Initialized 210 vehicles with congestion factor 0.5
-  Time: 1.0s | Vehicles: 15 | Avg Speed: 4.53m/s | Congestion: 0.05
-  Time: 51.0s | Vehicles: 15 | Avg Speed: 8.63m/s | Congestion: 0.05
-  Time: 101.0s | Vehicles: 15 | Avg Speed: 8.89m/s | Congestion: 0.05
-  Time: 151.0s | Vehicles: 15 | Avg Speed: 5.18m/s | Congestion: 0.05
-Saved 200 states to ./soutput_states/peak_congestion_scenario_states.json
-
-Report saved to: ./soutput_states/peak_congestion_scenario_report.json
-Visualization saved to: ./soutput_states/peak_congestion_scenario_analysis.png
+🚗 TRAFI Simulator Initialized
+   • Vehicles: 14
+   • Time step: 0.5s, Total steps: 500
+   • Road length: 100.0m
+   • Car-following model: IDM
+   • Traffic signals: Enabled
 
 ======================================================================
-Scenario: EMERGENCY_TRAFFIC_SCENARIO
+🚦 TRAFI SIMULATION STARTING
 ======================================================================
 
-Running EMERGENCY scenario for 200 seconds...
-Initialized 112 vehicles with congestion factor 1.0
-Added 2 emergency vehicles
-  Time: 201.0s | Vehicles: 16 | Avg Speed: 6.69m/s | Congestion: 0.06
-  Time: 251.0s | Vehicles: 16 | Avg Speed: 8.33m/s | Congestion: 0.06
-  Time: 301.0s | Vehicles: 16 | Avg Speed: 9.08m/s | Congestion: 0.06
-  Time: 351.0s | Vehicles: 16 | Avg Speed: 11.46m/s | Congestion: 0.06
-Saved 200 states to ./soutput_states/emergency_traffic_scenario_states.json
-
-Report saved to: ./soutput_states/emergency_traffic_scenario_report.json
-Visualization saved to: ./soutput_states/emergency_traffic_scenario_analysis.png
-
-Comparative analysis: ./soutput_states/comparative_analysis.json
+Step 0: Running vehicles: 14, Avg speed: 4.46 m/s
+Step 50: Running vehicles: 14, Avg speed: 16.67 m/s
+Step 100: Running vehicles: 0, Avg speed: 0.00 m/s
+Step 150: Running vehicles: 0, Avg speed: 0.00 m/s
+Step 200: Running vehicles: 0, Avg speed: 0.00 m/s
+Step 250: Running vehicles: 0, Avg speed: 0.00 m/s
+Step 300: Running vehicles: 0, Avg speed: 0.00 m/s
+Step 350: Running vehicles: 0, Avg speed: 0.00 m/s
+Step 400: Running vehicles: 0, Avg speed: 0.00 m/s
+Step 450: Running vehicles: 0, Avg speed: 0.00 m/s
 
 ======================================================================
-ANALYSIS COMPLETE
+✅ SIMULATION COMPLETED SUCCESSFULLY
 ======================================================================
-All results saved to: ./soutput_states//
 
-KEY FINDINGS:
+======================================================================
+TRAFI - TRAFFIC FLOW SIMULATION RESULTS
+======================================================================
 
-PEAK_CONGESTION_SCENARIO:
-  • Final congestion level: 0.05
-  • Average speed: 7.74 m/s
-  • Total vehicles: 15
+📊 PERFORMANCE METRICS
+----------------------------------------
+  • Average travel time: 30.07 s
+  • Average speed: 14.71 m/s (53.0 km/h)
+  • Average delay: 3.51 s
+  • Average waiting time: 0.00 s
 
-EMERGENCY_TRAFFIC_SCENARIO:
-  • Final congestion level: 0.06
-  • Average speed: 8.49 m/s
-  • Total vehicles: 16
+📈 THROUGHPUT & EFFICIENCY
+----------------------------------------
+  • Total trips completed: 14
+  • Average trip distance: 0.44 km
+  • System efficiency: 88.3%
+
+🌱 ENVIRONMENTAL IMPACT
+----------------------------------------
+  • Total fuel consumption: 0.12 liters
+  • Total CO2 emissions: 0.27 kg
+  • Average fuel per trip: 0.008 liters
+  • Average CO2 per trip: 0.019 kg
+
+⏱️  SIMULATION STATISTICS
+----------------------------------------
+  • Simulation runtime: 0.02 seconds
+  • Data points collected: 0
+======================================================================
+
+🎉 TRAFI simulation completed successfully!
