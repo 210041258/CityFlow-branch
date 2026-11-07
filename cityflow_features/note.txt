@@ -1,4 +1,4 @@
-C:\Users\albre\AppData\Local\Temp>python "C:\Users\albre\AppData\Local\Temp\deepseek_python_20261107_2cac1d.py" --rows 172429 --plot --out "15.csv" --seed 89
+C:\Users\albre\AppData\Local\Temp>python "C:\Users\albree\AppData\Local\Temp\dataset.py" --rows 172429 --plot --out "15.csv" --seed 89
 Generating 172429 datagrams -> 15.csv
   500/172429 (0.3%)
   1000/172429 (0.6%)
