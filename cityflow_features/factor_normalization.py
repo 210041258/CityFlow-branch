@@ -6,8 +6,6 @@ software, and hardware indicators. It uses synthetic or organization-approved
 aggregate inputs only; it is not an access-control/authorization system, an
 employee assessment tool, or a substitute for validating metric definitions.
 
-Run the demo from the repository root with:
-    python examples/factor_normalization_demo.py --samples 3000
 """
 
 from __future__ import annotations
