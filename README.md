@@ -10,43 +10,6 @@ https://github.com/210041258/CityFlow-branch
 **Feature package:**  
 https://github.com/210041258/CityFlow-branch/tree/master/cityflow_features
 
----
-
-## Overview
-
-The repository contains:
-
-- The CityFlow C++ simulation engine and Python interface.
-- Browser-based replay and traffic-visualization tooling.
-- Installation and usage documentation.
-- A structured Python feature package under `cityflow_features/`.
-- Experimental traffic-signal control and evaluation modules.
-- Case-study and scenario-generation scripts under `cases-study/`.
-- Synthetic dataset and stress-testing tools under `cityflow_features/dataset_/`.
-
-The repository therefore combines the original CityFlow simulator with additional experimental Python components for signal control, mock reinforcement-learning environments, scenario-based evaluation, communication modeling, and synthetic data generation.
-
----
-
-## Repository Structure
-
-```text
-CityFlow-branch/
-├── src/                       # CityFlow C++ simulation engine
-├── frontend/                  # Browser-based replay and visualization
-├── simulation/                # Traffic visualization utilities and assets
-├── cityflow_features/         # Python traffic-signal feature modules
-│   └── dataset_/              # Dataset generation and stress-testing tools
-├── cases-study/               # Scenario and experiment scripts
-├── tests/                     # Test scaffolding
-├── docs/                      # Sphinx documentation
-├── HOW_TO_RUN.md              # Installation and usage instructions
-├── setup.py                   # Python package configuration
-├── CMakeLists.txt             # Native build configuration
-└── Dockerfile                 # Containerized build configuration
-```
-
----
 
 # Implemented Simulator and Tooling
 
