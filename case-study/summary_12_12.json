@@ -1,0 +1,36 @@
+{
+  "version": "3.0.1",
+  "input_x": 8350.0,
+  "demand_y": 302.2328,
+  "logistic": {
+    "L": 302.2328,
+    "k": 0.0143,
+    "x0": 101.5374
+  },
+  "grid": {
+    "rows": 12,
+    "cols": 12,
+    "row_distance": 300.0,
+    "col_distance": 300.0,
+    "out_distance": 300.0,
+    "intersection_width": 30.0
+  },
+  "lanes": {
+    "left": 1,
+    "straight": 3,
+    "right": 1
+  },
+  "laneMaxSpeed": 9.88836,
+  "interval": 0.029422080679881352,
+  "num_routes": 48,
+  "vehicles": {
+    "target": 89239100,
+    "estimated": 89239100,
+    "duration_s": 54700.0,
+    "interval_s": 0.029422080679881352
+  },
+  "roadnet_written": true,
+  "roadnet_file": "runs\\viz\\roadnet_12_12.json",
+  "flow_file": "runs\\viz\\flow_12_12.json",
+  "dry_run": false
+}
