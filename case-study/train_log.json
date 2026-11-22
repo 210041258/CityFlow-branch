@@ -1,0 +1,3224 @@
+{
+  "config": {
+    "roadnet": "runs/c3_4/roadnet_3_4.json",
+    "flow": "runs/c3_4/flow_3_4.json",
+    "episodes": 300,
+    "duration": 120.0,
+    "control_interval": 5.0,
+    "dt": 0.5,
+    "seed": 0,
+    "lr": 0.03,
+    "gamma": 0.95,
+    "eval_episodes": 5,
+    "max_vehicles": 1,
+    "vehicles_note": "single car",
+    "entropy_target": 0.55,
+    "grad_clip": 1.0,
+    "improvements": [
+      "masked policy gradient (only active intersections contribute)",
+      "dense progress + waiting reward (single-car mode)",
+      "adaptive entropy temperature (anti-collapse)",
+      "linear value-critic baseline",
+      "Adam optimizer + gradient clipping",
+      "best-checkpoint tracking"
+    ]
+  },
+  "n_intersections": 12,
+  "inter_ids": [
+    "intersection_0_0",
+    "intersection_0_1",
+    "intersection_0_2",
+    "intersection_0_3",
+    "intersection_1_0",
+    "intersection_1_1",
+    "intersection_1_2",
+    "intersection_1_3",
+    "intersection_2_0",
+    "intersection_2_1",
+    "intersection_2_2",
+    "intersection_2_3"
+  ],
+  "train_seconds": 9.97,
+  "best_episode": 200,
+  "best_greedy_return": 16.033385317125063,
+  "curve": [
+    {
+      "episode": 1,
+      "return": 12.462923076026906,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16,
+      "mean_progress": 0.7175282050684604,
+      "entropy": 0.6926899537543354,
+      "beta": 0.138
+    },
+    {
+      "episode": 2,
+      "return": 12.241442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 36.3,
+      "mean_pressure": 0.21250000000000002,
+      "mean_progress": 0.6757151415931084,
+      "entropy": 0.6925776439677147,
+      "beta": 0.12696000000000002
+    },
+    {
+      "episode": 3,
+      "return": 12.725696018242035,
+      "finished": 1,
+      "mean_speed_kmh": 41.6,
+      "mean_pressure": 0.10714285714285714,
+      "mean_progress": 0.774692572731574,
+      "entropy": 0.6921592938403239,
+      "beta": 0.11680320000000002
+    },
+    {
+      "episode": 4,
+      "return": 11.001136867178392,
+      "finished": 1,
+      "mean_speed_kmh": 26.5,
+      "mean_pressure": 0.36818181818181817,
+      "mean_progress": 0.4923244030535632,
+      "entropy": 0.690795876597143,
+      "beta": 0.10745894400000003
+    },
+    {
+      "episode": 5,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.12357778560000002
+    },
+    {
+      "episode": 6,
+      "return": 12.485845067742845,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7190563378495229,
+      "entropy": 0.6920312962321893,
+      "beta": 0.11369156275200003
+    },
+    {
+      "episode": 7,
+      "return": 11.941442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 34.2,
+      "mean_pressure": 0.2588235294117647,
+      "mean_progress": 0.6359671920876314,
+      "entropy": 0.6917407495157398,
+      "beta": 0.10459623773184003
+    },
+    {
+      "episode": 8,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.689687717990069,
+      "beta": 0.09622853871329283
+    },
+    {
+      "episode": 9,
+      "return": 11.830139461448272,
+      "finished": 1,
+      "mean_speed_kmh": 34.2,
+      "mean_pressure": 0.2529411764705883,
+      "mean_progress": 0.6364787918498985,
+      "entropy": 0.6905005648409122,
+      "beta": 0.0885302556162294
+    },
+    {
+      "episode": 10,
+      "return": 12.125696018242035,
+      "finished": 1,
+      "mean_speed_kmh": 36.4,
+      "mean_pressure": 0.21875,
+      "mean_progress": 0.6778560011401272,
+      "entropy": 0.6835504713929436,
+      "beta": 0.08144783516693105
+    },
+    {
+      "episode": 11,
+      "return": 11.341442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 30.6,
+      "mean_pressure": 0.3368421052631579,
+      "mean_progress": 0.5690232771310386,
+      "entropy": 0.6888381826128515,
+      "beta": 0.07493200835357657
+    },
+    {
+      "episode": 12,
+      "return": 12.130139461448271,
+      "finished": 1,
+      "mean_speed_kmh": 36.3,
+      "mean_pressure": 0.20625,
+      "mean_progress": 0.6762587163405169,
+      "entropy": 0.6904333412694363,
+      "beta": 0.06893744768529045
+    },
+    {
+      "episode": 13,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.07927806483808401
+    },
+    {
+      "episode": 14,
+      "return": 12.162923076026907,
+      "finished": 1,
+      "mean_speed_kmh": 36.1,
+      "mean_pressure": 0.2125,
+      "mean_progress": 0.6726826922516816,
+      "entropy": 0.6913575537713287,
+      "beta": 0.07293581965103729
+    },
+    {
+      "episode": 15,
+      "return": 12.185845067742846,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.21875,
+      "mean_progress": 0.6741153167339278,
+      "entropy": 0.6907569475864804,
+      "beta": 0.0671009540789543
+    },
+    {
+      "episode": 16,
+      "return": 11.641442265489735,
+      "finished": 1,
+      "mean_speed_kmh": 32.3,
+      "mean_pressure": 0.3,
+      "mean_progress": 0.6006356814160964,
+      "entropy": 0.68787229176776,
+      "beta": 0.061732877752637964
+    },
+    {
+      "episode": 17,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.69183705727994,
+      "beta": 0.05679424753242693
+    },
+    {
+      "episode": 18,
+      "return": 12.730139461448273,
+      "finished": 1,
+      "mean_speed_kmh": 41.5,
+      "mean_pressure": 0.09285714285714286,
+      "mean_progress": 0.7728671043891623,
+      "entropy": 0.6917993616786804,
+      "beta": 0.05225070772983278
+    },
+    {
+      "episode": 19,
+      "return": 12.430139461448272,
+      "finished": 1,
+      "mean_speed_kmh": 38.8,
+      "mean_pressure": 0.15333333333333332,
+      "mean_progress": 0.7213426307632181,
+      "entropy": 0.6841244890579989,
+      "beta": 0.04807065111144616
+    },
+    {
+      "episode": 20,
+      "return": 12.425696018242034,
+      "finished": 1,
+      "mean_speed_kmh": 38.9,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7230464012161357,
+      "entropy": 0.6721481271991301,
+      "beta": 0.044224999022530465
+    },
+    {
+      "episode": 21,
+      "return": 12.201136867178391,
+      "finished": 1,
+      "mean_speed_kmh": 32.3,
+      "mean_pressure": 0.22777777777777775,
+      "mean_progress": 0.6017298259543551,
+      "entropy": 0.6848780772088019,
+      "beta": 0.04068699910072803
+    },
+    {
+      "episode": 22,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.04679004896583723
+    },
+    {
+      "episode": 23,
+      "return": 12.162923076026907,
+      "finished": 1,
+      "mean_speed_kmh": 36.1,
+      "mean_pressure": 0.2125,
+      "mean_progress": 0.6726826922516816,
+      "entropy": 0.6905508065159406,
+      "beta": 0.04304684504857025
+    },
+    {
+      "episode": 24,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6774446718589451,
+      "beta": 0.03960309744468463
+    },
+    {
+      "episode": 25,
+      "return": 12.241442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 36.3,
+      "mean_pressure": 0.21250000000000002,
+      "mean_progress": 0.6757151415931084,
+      "entropy": 0.6720048198336442,
+      "beta": 0.03643484964910986
+    },
+    {
+      "episode": 26,
+      "return": 11.941442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 34.2,
+      "mean_pressure": 0.2588235294117647,
+      "mean_progress": 0.6359671920876314,
+      "entropy": 0.6766423727487746,
+      "beta": 0.03352006167718107
+    },
+    {
+      "episode": 27,
+      "return": 11.301136867178393,
+      "finished": 1,
+      "mean_speed_kmh": 27.7,
+      "mean_pressure": 0.33809523809523806,
+      "mean_progress": 0.51576842224659,
+      "entropy": 0.6819267420016599,
+      "beta": 0.030838456743006587
+    },
+    {
+      "episode": 28,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6865548316476404,
+      "beta": 0.02837138020356606
+    },
+    {
+      "episode": 29,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.03262708723410097
+    },
+    {
+      "episode": 30,
+      "return": 11.941442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 34.2,
+      "mean_pressure": 0.2588235294117647,
+      "mean_progress": 0.6359671920876314,
+      "entropy": 0.6882483008381381,
+      "beta": 0.030016920255372892
+    },
+    {
+      "episode": 31,
+      "return": 12.485845067742845,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7190563378495229,
+      "entropy": 0.6469525889444416,
+      "beta": 0.02761556663494306
+    },
+    {
+      "episode": 32,
+      "return": 11.262923076026906,
+      "finished": 1,
+      "mean_speed_kmh": 30.4,
+      "mean_pressure": 0.3368421052631579,
+      "mean_progress": 0.5664696355803635,
+      "entropy": 0.6809118574265808,
+      "beta": 0.025406321304147616
+    },
+    {
+      "episode": 33,
+      "return": 12.201136867178391,
+      "finished": 1,
+      "mean_speed_kmh": 32.3,
+      "mean_pressure": 0.22777777777777775,
+      "mean_progress": 0.6017298259543551,
+      "entropy": 0.6846154590694025,
+      "beta": 0.023373815599815807
+    },
+    {
+      "episode": 34,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6906386003730389,
+      "beta": 0.021503910351830545
+    },
+    {
+      "episode": 35,
+      "return": 12.288871083360359,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.16249999999999998,
+      "mean_progress": 0.6730544427100225,
+      "entropy": 0.6767367066537825,
+      "beta": 0.02
+    },
+    {
+      "episode": 36,
+      "return": 11.862923076026906,
+      "finished": 1,
+      "mean_speed_kmh": 34.0,
+      "mean_pressure": 0.25882352941176473,
+      "mean_progress": 0.6331131221192299,
+      "entropy": 0.6831534303967455,
+      "beta": 0.02
+    },
+    {
+      "episode": 37,
+      "return": 11.941442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 34.2,
+      "mean_pressure": 0.25882352941176473,
+      "mean_progress": 0.6359671920876314,
+      "entropy": 0.6724535461296914,
+      "beta": 0.02
+    },
+    {
+      "episode": 38,
+      "return": 12.485845067742845,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7190563378495229,
+      "entropy": 0.681390319786098,
+      "beta": 0.02
+    },
+    {
+      "episode": 39,
+      "return": 12.201136867178391,
+      "finished": 1,
+      "mean_speed_kmh": 32.3,
+      "mean_pressure": 0.22777777777777775,
+      "mean_progress": 0.6017298259543551,
+      "entropy": 0.6741297482815084,
+      "beta": 0.02
+    },
+    {
+      "episode": 40,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.023
+    },
+    {
+      "episode": 41,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.026449999999999998
+    },
+    {
+      "episode": 42,
+      "return": 11.98887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 34.0,
+      "mean_pressure": 0.2117647058823529,
+      "mean_progress": 0.6334630049035506,
+      "entropy": 0.65951636763889,
+      "beta": 0.024333999999999998
+    },
+    {
+      "episode": 43,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.027984099999999994
+    },
+    {
+      "episode": 44,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.03218171499999999
+    },
+    {
+      "episode": 45,
+      "return": 12.541442265489733,
+      "finished": 1,
+      "mean_speed_kmh": 38.7,
+      "mean_pressure": 0.16000000000000003,
+      "mean_progress": 0.7207628176993156,
+      "entropy": 0.6686394599899934,
+      "beta": 0.029607177799999995
+    },
+    {
+      "episode": 46,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6897088862687225,
+      "beta": 0.027238603575999998
+    },
+    {
+      "episode": 47,
+      "return": 11.98887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 34.0,
+      "mean_pressure": 0.2117647058823529,
+      "mean_progress": 0.6334630049035506,
+      "entropy": 0.6544371878688908,
+      "beta": 0.02505951528992
+    },
+    {
+      "episode": 48,
+      "return": 11.341442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 30.6,
+      "mean_pressure": 0.3368421052631579,
+      "mean_progress": 0.5690232771310386,
+      "entropy": 0.6694460272430308,
+      "beta": 0.0230547540667264
+    },
+    {
+      "episode": 49,
+      "return": 12.725696018242035,
+      "finished": 1,
+      "mean_speed_kmh": 41.6,
+      "mean_pressure": 0.10714285714285714,
+      "mean_progress": 0.774692572731574,
+      "entropy": 0.6766633156181046,
+      "beta": 0.02121037374138829
+    },
+    {
+      "episode": 50,
+      "return": 12.725696018242035,
+      "finished": 1,
+      "mean_speed_kmh": 41.6,
+      "mean_pressure": 0.10714285714285714,
+      "mean_progress": 0.774692572731574,
+      "entropy": 0.6894377818507478,
+      "beta": 0.02
+    },
+    {
+      "episode": 51,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6761272109342532,
+      "beta": 0.02
+    },
+    {
+      "episode": 52,
+      "return": 11.562923076026905,
+      "finished": 1,
+      "mean_speed_kmh": 32.1,
+      "mean_pressure": 0.30000000000000004,
+      "mean_progress": 0.5979401708903836,
+      "entropy": 0.6454436068708164,
+      "beta": 0.02
+    },
+    {
+      "episode": 53,
+      "return": 12.485845067742845,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7190563378495229,
+      "entropy": 0.6484664248372375,
+      "beta": 0.02
+    },
+    {
+      "episode": 54,
+      "return": 11.562923076026905,
+      "finished": 1,
+      "mean_speed_kmh": 32.1,
+      "mean_pressure": 0.30000000000000004,
+      "mean_progress": 0.5979401708903836,
+      "entropy": 0.6437593282354339,
+      "beta": 0.02
+    },
+    {
+      "episode": 55,
+      "return": 12.162923076026907,
+      "finished": 1,
+      "mean_speed_kmh": 36.1,
+      "mean_pressure": 0.2125,
+      "mean_progress": 0.6726826922516816,
+      "entropy": 0.6297604494187964,
+      "beta": 0.02
+    },
+    {
+      "episode": 56,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.023
+    },
+    {
+      "episode": 57,
+      "return": 12.485845067742845,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7190563378495229,
+      "entropy": 0.662451913638781,
+      "beta": 0.02116
+    },
+    {
+      "episode": 58,
+      "return": 12.462923076026906,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16,
+      "mean_progress": 0.7175282050684604,
+      "entropy": 0.6337352098864643,
+      "beta": 0.02
+    },
+    {
+      "episode": 59,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6889551008842693,
+      "beta": 0.02
+    },
+    {
+      "episode": 60,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.023
+    },
+    {
+      "episode": 61,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.026449999999999998
+    },
+    {
+      "episode": 62,
+      "return": 12.425696018242034,
+      "finished": 1,
+      "mean_speed_kmh": 38.9,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7230464012161357,
+      "entropy": 0.680946006905077,
+      "beta": 0.024333999999999998
+    },
+    {
+      "episode": 63,
+      "return": 12.201136867178391,
+      "finished": 1,
+      "mean_speed_kmh": 32.3,
+      "mean_pressure": 0.22777777777777775,
+      "mean_progress": 0.6017298259543551,
+      "entropy": 0.6362037902190716,
+      "beta": 0.02238728
+    },
+    {
+      "episode": 64,
+      "return": 12.185845067742846,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.21875,
+      "mean_progress": 0.6741153167339278,
+      "entropy": 0.677999349038806,
+      "beta": 0.0205962976
+    },
+    {
+      "episode": 65,
+      "return": 12.185845067742846,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.21875,
+      "mean_progress": 0.6741153167339278,
+      "entropy": 0.6831995165660528,
+      "beta": 0.02
+    },
+    {
+      "episode": 66,
+      "return": 12.541442265489733,
+      "finished": 1,
+      "mean_speed_kmh": 38.7,
+      "mean_pressure": 0.16000000000000003,
+      "mean_progress": 0.7207628176993156,
+      "entropy": 0.6804166673942613,
+      "beta": 0.02
+    },
+    {
+      "episode": 67,
+      "return": 12.462923076026906,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16,
+      "mean_progress": 0.7175282050684604,
+      "entropy": 0.6720591233453886,
+      "beta": 0.02
+    },
+    {
+      "episode": 68,
+      "return": 12.430139461448272,
+      "finished": 1,
+      "mean_speed_kmh": 38.8,
+      "mean_pressure": 0.15333333333333332,
+      "mean_progress": 0.7213426307632181,
+      "entropy": 0.680050709465829,
+      "beta": 0.02
+    },
+    {
+      "episode": 69,
+      "return": 11.885845067742846,
+      "finished": 1,
+      "mean_speed_kmh": 34.1,
+      "mean_pressure": 0.2647058823529412,
+      "mean_progress": 0.6344614745731085,
+      "entropy": 0.6798607865211426,
+      "beta": 0.02
+    },
+    {
+      "episode": 70,
+      "return": 12.730139461448273,
+      "finished": 1,
+      "mean_speed_kmh": 41.5,
+      "mean_pressure": 0.09285714285714286,
+      "mean_progress": 0.7728671043891623,
+      "entropy": 0.6711524680927036,
+      "beta": 0.02
+    },
+    {
+      "episode": 71,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6881280144392491,
+      "beta": 0.02
+    },
+    {
+      "episode": 72,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.023
+    },
+    {
+      "episode": 73,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6879044148243867,
+      "beta": 0.02116
+    },
+    {
+      "episode": 74,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.024334
+    },
+    {
+      "episode": 75,
+      "return": 11.885845067742846,
+      "finished": 1,
+      "mean_speed_kmh": 34.1,
+      "mean_pressure": 0.2647058823529412,
+      "mean_progress": 0.6344614745731085,
+      "entropy": 0.6201621934918466,
+      "beta": 0.022387280000000002
+    },
+    {
+      "episode": 76,
+      "return": 12.201136867178391,
+      "finished": 1,
+      "mean_speed_kmh": 32.3,
+      "mean_pressure": 0.22777777777777775,
+      "mean_progress": 0.6017298259543551,
+      "entropy": 0.6660065633034369,
+      "beta": 0.020596297600000004
+    },
+    {
+      "episode": 77,
+      "return": 11.98887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 34.0,
+      "mean_pressure": 0.2117647058823529,
+      "mean_progress": 0.6334630049035506,
+      "entropy": 0.6646908228841526,
+      "beta": 0.02
+    },
+    {
+      "episode": 78,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6873647410866244,
+      "beta": 0.02
+    },
+    {
+      "episode": 79,
+      "return": 11.641442265489735,
+      "finished": 1,
+      "mean_speed_kmh": 32.3,
+      "mean_pressure": 0.30000000000000004,
+      "mean_progress": 0.6006356814160962,
+      "entropy": 0.6551216853289438,
+      "beta": 0.02
+    },
+    {
+      "episode": 80,
+      "return": 12.725696018242035,
+      "finished": 1,
+      "mean_speed_kmh": 41.6,
+      "mean_pressure": 0.10714285714285714,
+      "mean_progress": 0.774692572731574,
+      "entropy": 0.6871815937411082,
+      "beta": 0.02
+    },
+    {
+      "episode": 81,
+      "return": 11.585845067742845,
+      "finished": 1,
+      "mean_speed_kmh": 32.2,
+      "mean_pressure": 0.3055555555555556,
+      "mean_progress": 0.5992136148746025,
+      "entropy": 0.6546459116365909,
+      "beta": 0.02
+    },
+    {
+      "episode": 82,
+      "return": 12.730139461448273,
+      "finished": 1,
+      "mean_speed_kmh": 41.5,
+      "mean_pressure": 0.09285714285714286,
+      "mean_progress": 0.7728671043891623,
+      "entropy": 0.6870486829243532,
+      "beta": 0.02
+    },
+    {
+      "episode": 83,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6869617907256149,
+      "beta": 0.02
+    },
+    {
+      "episode": 84,
+      "return": 12.485845067742845,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7190563378495229,
+      "entropy": 0.6608476917802891,
+      "beta": 0.02
+    },
+    {
+      "episode": 85,
+      "return": 12.501136867178392,
+      "finished": 1,
+      "mean_speed_kmh": 34.2,
+      "mean_pressure": 0.18235294117647058,
+      "mean_progress": 0.6371256980693172,
+      "entropy": 0.6625706992206729,
+      "beta": 0.02
+    },
+    {
+      "episode": 86,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.023
+    },
+    {
+      "episode": 87,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.026449999999999998
+    },
+    {
+      "episode": 88,
+      "return": 12.241442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 36.3,
+      "mean_pressure": 0.2125,
+      "mean_progress": 0.6757151415931084,
+      "entropy": 0.6795805842970172,
+      "beta": 0.024333999999999998
+    },
+    {
+      "episode": 89,
+      "return": 11.885845067742846,
+      "finished": 1,
+      "mean_speed_kmh": 34.1,
+      "mean_pressure": 0.2647058823529412,
+      "mean_progress": 0.6344614745731085,
+      "entropy": 0.6298779914350034,
+      "beta": 0.02238728
+    },
+    {
+      "episode": 90,
+      "return": 12.541442265489733,
+      "finished": 1,
+      "mean_speed_kmh": 38.7,
+      "mean_pressure": 0.16000000000000003,
+      "mean_progress": 0.7207628176993156,
+      "entropy": 0.6758122638305406,
+      "beta": 0.0205962976
+    },
+    {
+      "episode": 91,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6862118185835746,
+      "beta": 0.02
+    },
+    {
+      "episode": 92,
+      "return": 11.601136867178392,
+      "finished": 1,
+      "mean_speed_kmh": 29.1,
+      "mean_pressure": 0.305,
+      "mean_progress": 0.5415568433589196,
+      "entropy": 0.666168433364336,
+      "beta": 0.02
+    },
+    {
+      "episode": 93,
+      "return": 12.130139461448271,
+      "finished": 1,
+      "mean_speed_kmh": 36.3,
+      "mean_pressure": 0.20625,
+      "mean_progress": 0.6762587163405169,
+      "entropy": 0.6601576918110988,
+      "beta": 0.02
+    },
+    {
+      "episode": 94,
+      "return": 12.430139461448272,
+      "finished": 1,
+      "mean_speed_kmh": 38.8,
+      "mean_pressure": 0.15333333333333332,
+      "mean_progress": 0.7213426307632181,
+      "entropy": 0.6468111831274377,
+      "beta": 0.02
+    },
+    {
+      "episode": 95,
+      "return": 12.425696018242034,
+      "finished": 1,
+      "mean_speed_kmh": 38.9,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7230464012161357,
+      "entropy": 0.6747255666825518,
+      "beta": 0.02
+    },
+    {
+      "episode": 96,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.023
+    },
+    {
+      "episode": 97,
+      "return": 12.162923076026907,
+      "finished": 1,
+      "mean_speed_kmh": 36.1,
+      "mean_pressure": 0.2125,
+      "mean_progress": 0.6726826922516816,
+      "entropy": 0.6780933979048601,
+      "beta": 0.02116
+    },
+    {
+      "episode": 98,
+      "return": 12.725696018242035,
+      "finished": 1,
+      "mean_speed_kmh": 41.6,
+      "mean_pressure": 0.10714285714285714,
+      "mean_progress": 0.774692572731574,
+      "entropy": 0.6854387447556796,
+      "beta": 0.02
+    },
+    {
+      "episode": 99,
+      "return": 11.941442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 34.2,
+      "mean_pressure": 0.2588235294117647,
+      "mean_progress": 0.6359671920876314,
+      "entropy": 0.6740784884543074,
+      "beta": 0.02
+    },
+    {
+      "episode": 100,
+      "return": 12.430139461448272,
+      "finished": 1,
+      "mean_speed_kmh": 38.8,
+      "mean_pressure": 0.15333333333333332,
+      "mean_progress": 0.7213426307632181,
+      "entropy": 0.6739578057463811,
+      "beta": 0.02
+    },
+    {
+      "episode": 101,
+      "return": 12.462923076026906,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16,
+      "mean_progress": 0.7175282050684604,
+      "entropy": 0.6624427319881956,
+      "beta": 0.02
+    },
+    {
+      "episode": 102,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6851792715306892,
+      "beta": 0.02
+    },
+    {
+      "episode": 103,
+      "return": 12.288871083360359,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.16249999999999998,
+      "mean_progress": 0.6730544427100225,
+      "entropy": 0.6735436007091844,
+      "beta": 0.02
+    },
+    {
+      "episode": 104,
+      "return": 12.288871083360359,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.16249999999999998,
+      "mean_progress": 0.6730544427100225,
+      "entropy": 0.6733800788048763,
+      "beta": 0.02
+    },
+    {
+      "episode": 105,
+      "return": 12.425696018242034,
+      "finished": 1,
+      "mean_speed_kmh": 38.9,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7230464012161357,
+      "entropy": 0.6732244877109581,
+      "beta": 0.02
+    },
+    {
+      "episode": 106,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.023
+    },
+    {
+      "episode": 107,
+      "return": 12.725696018242035,
+      "finished": 1,
+      "mean_speed_kmh": 41.6,
+      "mean_pressure": 0.10714285714285714,
+      "mean_progress": 0.774692572731574,
+      "entropy": 0.684803330941502,
+      "beta": 0.02116
+    },
+    {
+      "episode": 108,
+      "return": 11.530139461448272,
+      "finished": 1,
+      "mean_speed_kmh": 32.3,
+      "mean_pressure": 0.2944444444444445,
+      "mean_progress": 0.6011188589693486,
+      "entropy": 0.6138167214404152,
+      "beta": 0.02
+    },
+    {
+      "episode": 109,
+      "return": 11.641442265489735,
+      "finished": 1,
+      "mean_speed_kmh": 32.3,
+      "mean_pressure": 0.30000000000000004,
+      "mean_progress": 0.6006356814160962,
+      "entropy": 0.6410957278294402,
+      "beta": 0.02
+    },
+    {
+      "episode": 110,
+      "return": 12.725696018242035,
+      "finished": 1,
+      "mean_speed_kmh": 41.6,
+      "mean_pressure": 0.10714285714285714,
+      "mean_progress": 0.774692572731574,
+      "entropy": 0.6846761530530294,
+      "beta": 0.02
+    },
+    {
+      "episode": 111,
+      "return": 12.185845067742846,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.21875,
+      "mean_progress": 0.6741153167339278,
+      "entropy": 0.6353651472027981,
+      "beta": 0.02
+    },
+    {
+      "episode": 112,
+      "return": 12.725696018242035,
+      "finished": 1,
+      "mean_speed_kmh": 41.6,
+      "mean_pressure": 0.10714285714285714,
+      "mean_progress": 0.774692572731574,
+      "entropy": 0.6846469221219067,
+      "beta": 0.02
+    },
+    {
+      "episode": 113,
+      "return": 12.425696018242034,
+      "finished": 1,
+      "mean_speed_kmh": 38.9,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7230464012161357,
+      "entropy": 0.6724937921642915,
+      "beta": 0.02
+    },
+    {
+      "episode": 114,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6846705538046027,
+      "beta": 0.02
+    },
+    {
+      "episode": 115,
+      "return": 12.541442265489733,
+      "finished": 1,
+      "mean_speed_kmh": 38.7,
+      "mean_pressure": 0.16000000000000003,
+      "mean_progress": 0.7207628176993156,
+      "entropy": 0.6601967898768026,
+      "beta": 0.02
+    },
+    {
+      "episode": 116,
+      "return": 12.425696018242034,
+      "finished": 1,
+      "mean_speed_kmh": 38.9,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7230464012161357,
+      "entropy": 0.6723064544616433,
+      "beta": 0.02
+    },
+    {
+      "episode": 117,
+      "return": 12.485845067742845,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7190563378495229,
+      "entropy": 0.640734555411599,
+      "beta": 0.02
+    },
+    {
+      "episode": 118,
+      "return": 11.041442265489735,
+      "finished": 1,
+      "mean_speed_kmh": 29.0,
+      "mean_pressure": 0.37000000000000005,
+      "mean_progress": 0.5405721132744867,
+      "entropy": 0.6434729624139673,
+      "beta": 0.02
+    },
+    {
+      "episode": 119,
+      "return": 11.901136867178392,
+      "finished": 1,
+      "mean_speed_kmh": 30.6,
+      "mean_pressure": 0.26842105263157895,
+      "mean_progress": 0.5700598351146522,
+      "entropy": 0.5886308089229007,
+      "beta": 0.02
+    },
+    {
+      "episode": 120,
+      "return": 11.901136867178392,
+      "finished": 1,
+      "mean_speed_kmh": 30.6,
+      "mean_pressure": 0.26842105263157895,
+      "mean_progress": 0.5700598351146522,
+      "entropy": 0.6743521375449235,
+      "beta": 0.02
+    },
+    {
+      "episode": 121,
+      "return": 12.288871083360359,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.16249999999999998,
+      "mean_progress": 0.6730544427100225,
+      "entropy": 0.671652817551942,
+      "beta": 0.02
+    },
+    {
+      "episode": 122,
+      "return": 12.730139461448273,
+      "finished": 1,
+      "mean_speed_kmh": 41.5,
+      "mean_pressure": 0.09285714285714286,
+      "mean_progress": 0.7728671043891623,
+      "entropy": 0.658704353599606,
+      "beta": 0.02
+    },
+    {
+      "episode": 123,
+      "return": 11.641442265489735,
+      "finished": 1,
+      "mean_speed_kmh": 32.3,
+      "mean_pressure": 0.3,
+      "mean_progress": 0.6006356814160964,
+      "entropy": 0.6374423897329858,
+      "beta": 0.02
+    },
+    {
+      "episode": 124,
+      "return": 12.162923076026907,
+      "finished": 1,
+      "mean_speed_kmh": 36.1,
+      "mean_pressure": 0.2125,
+      "mean_progress": 0.6726826922516816,
+      "entropy": 0.6754450401875989,
+      "beta": 0.02
+    },
+    {
+      "episode": 125,
+      "return": 11.885845067742846,
+      "finished": 1,
+      "mean_speed_kmh": 34.1,
+      "mean_pressure": 0.2647058823529412,
+      "mean_progress": 0.6344614745731085,
+      "entropy": 0.614584973574142,
+      "beta": 0.02
+    },
+    {
+      "episode": 126,
+      "return": 12.541442265489733,
+      "finished": 1,
+      "mean_speed_kmh": 38.7,
+      "mean_pressure": 0.16000000000000003,
+      "mean_progress": 0.7207628176993156,
+      "entropy": 0.6707913339845084,
+      "beta": 0.02
+    },
+    {
+      "episode": 127,
+      "return": 12.288871083360359,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.16249999999999998,
+      "mean_progress": 0.6730544427100225,
+      "entropy": 0.6705904012631803,
+      "beta": 0.02
+    },
+    {
+      "episode": 128,
+      "return": 12.730139461448273,
+      "finished": 1,
+      "mean_speed_kmh": 41.5,
+      "mean_pressure": 0.09285714285714286,
+      "mean_progress": 0.7728671043891623,
+      "entropy": 0.6569043183936971,
+      "beta": 0.02
+    },
+    {
+      "episode": 129,
+      "return": 12.541442265489733,
+      "finished": 1,
+      "mean_speed_kmh": 38.7,
+      "mean_pressure": 0.16000000000000003,
+      "mean_progress": 0.7207628176993156,
+      "entropy": 0.683827029335201,
+      "beta": 0.02
+    },
+    {
+      "episode": 130,
+      "return": 12.541442265489733,
+      "finished": 1,
+      "mean_speed_kmh": 38.7,
+      "mean_pressure": 0.16000000000000003,
+      "mean_progress": 0.7207628176993156,
+      "entropy": 0.683737404415717,
+      "beta": 0.02
+    },
+    {
+      "episode": 131,
+      "return": 12.241442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 36.3,
+      "mean_pressure": 0.2125,
+      "mean_progress": 0.6757151415931084,
+      "entropy": 0.674339298846156,
+      "beta": 0.02
+    },
+    {
+      "episode": 132,
+      "return": 12.730139461448273,
+      "finished": 1,
+      "mean_speed_kmh": 41.5,
+      "mean_pressure": 0.09285714285714286,
+      "mean_progress": 0.7728671043891623,
+      "entropy": 0.6835020580927345,
+      "beta": 0.02
+    },
+    {
+      "episode": 133,
+      "return": 11.901136867178392,
+      "finished": 1,
+      "mean_speed_kmh": 30.6,
+      "mean_pressure": 0.26842105263157895,
+      "mean_progress": 0.5700598351146522,
+      "entropy": 0.6320617910975381,
+      "beta": 0.02
+    },
+    {
+      "episode": 134,
+      "return": 12.541442265489733,
+      "finished": 1,
+      "mean_speed_kmh": 38.7,
+      "mean_pressure": 0.16000000000000003,
+      "mean_progress": 0.7207628176993156,
+      "entropy": 0.6689172805059167,
+      "beta": 0.02
+    },
+    {
+      "episode": 135,
+      "return": 12.725696018242035,
+      "finished": 1,
+      "mean_speed_kmh": 41.6,
+      "mean_pressure": 0.10714285714285714,
+      "mean_progress": 0.774692572731574,
+      "entropy": 0.6541556087219279,
+      "beta": 0.02
+    },
+    {
+      "episode": 136,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6830497678820693,
+      "beta": 0.02
+    },
+    {
+      "episode": 137,
+      "return": 12.541442265489733,
+      "finished": 1,
+      "mean_speed_kmh": 38.7,
+      "mean_pressure": 0.16000000000000003,
+      "mean_progress": 0.7207628176993156,
+      "entropy": 0.6175380238517238,
+      "beta": 0.02
+    },
+    {
+      "episode": 138,
+      "return": 12.725696018242035,
+      "finished": 1,
+      "mean_speed_kmh": 41.6,
+      "mean_pressure": 0.10714285714285714,
+      "mean_progress": 0.774692572731574,
+      "entropy": 0.6827895819258875,
+      "beta": 0.02
+    },
+    {
+      "episode": 139,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6827001163274173,
+      "beta": 0.02
+    },
+    {
+      "episode": 140,
+      "return": 12.485845067742845,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7190563378495229,
+      "entropy": 0.6447869016177274,
+      "beta": 0.02
+    },
+    {
+      "episode": 141,
+      "return": 12.725696018242035,
+      "finished": 1,
+      "mean_speed_kmh": 41.6,
+      "mean_pressure": 0.10714285714285714,
+      "mean_progress": 0.774692572731574,
+      "entropy": 0.6524985986601255,
+      "beta": 0.02
+    },
+    {
+      "episode": 142,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6824383390121146,
+      "beta": 0.02
+    },
+    {
+      "episode": 143,
+      "return": 12.541442265489733,
+      "finished": 1,
+      "mean_speed_kmh": 38.7,
+      "mean_pressure": 0.16000000000000003,
+      "mean_progress": 0.7207628176993156,
+      "entropy": 0.6158546910947518,
+      "beta": 0.02
+    },
+    {
+      "episode": 144,
+      "return": 12.425696018242034,
+      "finished": 1,
+      "mean_speed_kmh": 38.9,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7230464012161357,
+      "entropy": 0.667136060749163,
+      "beta": 0.02
+    },
+    {
+      "episode": 145,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6821433090866719,
+      "beta": 0.02
+    },
+    {
+      "episode": 146,
+      "return": 12.241442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 36.3,
+      "mean_pressure": 0.21250000000000002,
+      "mean_progress": 0.6757151415931084,
+      "entropy": 0.6462559009587451,
+      "beta": 0.02
+    },
+    {
+      "episode": 147,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6512755374798328,
+      "beta": 0.02
+    },
+    {
+      "episode": 148,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.023
+    },
+    {
+      "episode": 149,
+      "return": 12.462923076026906,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16,
+      "mean_progress": 0.7175282050684604,
+      "entropy": 0.6816047034279966,
+      "beta": 0.02116
+    },
+    {
+      "episode": 150,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.024334
+    },
+    {
+      "episode": 151,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.027984099999999998
+    },
+    {
+      "episode": 152,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.03218171499999999
+    },
+    {
+      "episode": 153,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6811707934947486,
+      "beta": 0.029607177799999995
+    },
+    {
+      "episode": 154,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.03404825446999999
+    },
+    {
+      "episode": 155,
+      "return": 12.288871083360359,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.16249999999999998,
+      "mean_progress": 0.6730544427100225,
+      "entropy": 0.5094899723604829,
+      "beta": 0.039155492640499986
+    },
+    {
+      "episode": 156,
+      "return": 11.601136867178392,
+      "finished": 1,
+      "mean_speed_kmh": 29.1,
+      "mean_pressure": 0.305,
+      "mean_progress": 0.5415568433589195,
+      "entropy": 0.6380913417497728,
+      "beta": 0.03602305322925999
+    },
+    {
+      "episode": 157,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.04142651121364899
+    },
+    {
+      "episode": 158,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.04764048789569633
+    },
+    {
+      "episode": 159,
+      "return": 12.541442265489733,
+      "finished": 1,
+      "mean_speed_kmh": 38.7,
+      "mean_pressure": 0.16000000000000003,
+      "mean_progress": 0.7207628176993156,
+      "entropy": 0.6643876455868298,
+      "beta": 0.043829248864040625
+    },
+    {
+      "episode": 160,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.680397405726659,
+      "beta": 0.04032290895491738
+    },
+    {
+      "episode": 161,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.04637134529815498
+    },
+    {
+      "episode": 162,
+      "return": 11.98887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 34.0,
+      "mean_pressure": 0.2117647058823529,
+      "mean_progress": 0.6334630049035506,
+      "entropy": 0.47503414632776214,
+      "beta": 0.05332704709287822
+    },
+    {
+      "episode": 163,
+      "return": 12.185845067742846,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.21875,
+      "mean_progress": 0.6741153167339278,
+      "entropy": 0.5550535514302397,
+      "beta": 0.04906088332544797
+    },
+    {
+      "episode": 164,
+      "return": 12.430139461448272,
+      "finished": 1,
+      "mean_speed_kmh": 38.8,
+      "mean_pressure": 0.15333333333333332,
+      "mean_progress": 0.7213426307632181,
+      "entropy": 0.6638370907885347,
+      "beta": 0.04513601265941213
+    },
+    {
+      "episode": 165,
+      "return": 12.730139461448273,
+      "finished": 1,
+      "mean_speed_kmh": 41.5,
+      "mean_pressure": 0.09285714285714286,
+      "mean_progress": 0.7728671043891623,
+      "entropy": 0.6799205191451427,
+      "beta": 0.041525131646659164
+    },
+    {
+      "episode": 166,
+      "return": 11.98887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 34.0,
+      "mean_pressure": 0.2117647058823529,
+      "mean_progress": 0.6334630049035506,
+      "entropy": 0.6427024683318114,
+      "beta": 0.03820312111492643
+    },
+    {
+      "episode": 167,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.04393358928216539
+    },
+    {
+      "episode": 168,
+      "return": 12.288871083360359,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.16249999999999998,
+      "mean_progress": 0.6730544427100225,
+      "entropy": 0.6244088284381628,
+      "beta": 0.040418902139592164
+    },
+    {
+      "episode": 169,
+      "return": 12.288871083360359,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.16249999999999998,
+      "mean_progress": 0.6730544427100225,
+      "entropy": 0.6245156699376968,
+      "beta": 0.03718538996842479
+    },
+    {
+      "episode": 170,
+      "return": 12.730139461448273,
+      "finished": 1,
+      "mean_speed_kmh": 41.5,
+      "mean_pressure": 0.09285714285714286,
+      "mean_progress": 0.7728671043891623,
+      "entropy": 0.67975219288304,
+      "beta": 0.03421055877095081
+    },
+    {
+      "episode": 171,
+      "return": 12.425696018242034,
+      "finished": 1,
+      "mean_speed_kmh": 38.9,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7230464012161357,
+      "entropy": 0.5727242430540882,
+      "beta": 0.031473714069274746
+    },
+    {
+      "episode": 172,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.036194771179665956
+    },
+    {
+      "episode": 173,
+      "return": 12.462923076026906,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16,
+      "mean_progress": 0.7175282050684604,
+      "entropy": 0.6113651798586949,
+      "beta": 0.03329918948529268
+    },
+    {
+      "episode": 174,
+      "return": 12.730139461448273,
+      "finished": 1,
+      "mean_speed_kmh": 41.5,
+      "mean_pressure": 0.09285714285714286,
+      "mean_progress": 0.7728671043891623,
+      "entropy": 0.6795952260961162,
+      "beta": 0.03063525432646927
+    },
+    {
+      "episode": 175,
+      "return": 12.430139461448272,
+      "finished": 1,
+      "mean_speed_kmh": 38.8,
+      "mean_pressure": 0.15333333333333332,
+      "mean_progress": 0.7213426307632181,
+      "entropy": 0.6635210667924466,
+      "beta": 0.02818443398035173
+    },
+    {
+      "episode": 176,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6474111237069962,
+      "beta": 0.02592967926192359
+    },
+    {
+      "episode": 177,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.02981913115121213
+    },
+    {
+      "episode": 178,
+      "return": 11.562923076026905,
+      "finished": 1,
+      "mean_speed_kmh": 32.1,
+      "mean_pressure": 0.30000000000000004,
+      "mean_progress": 0.5979401708903836,
+      "entropy": 0.629292901548884,
+      "beta": 0.02743360065911516
+    },
+    {
+      "episode": 179,
+      "return": 12.725696018242035,
+      "finished": 1,
+      "mean_speed_kmh": 41.6,
+      "mean_pressure": 0.10714285714285714,
+      "mean_progress": 0.774692572731574,
+      "entropy": 0.6791038604345148,
+      "beta": 0.02523891260638595
+    },
+    {
+      "episode": 180,
+      "return": 12.185845067742846,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.21875,
+      "mean_progress": 0.6741153167339278,
+      "entropy": 0.6410256390012686,
+      "beta": 0.023219799597875075
+    },
+    {
+      "episode": 181,
+      "return": 12.425696018242034,
+      "finished": 1,
+      "mean_speed_kmh": 38.9,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7230464012161357,
+      "entropy": 0.662426726226325,
+      "beta": 0.02136221563004507
+    },
+    {
+      "episode": 182,
+      "return": 12.730139461448273,
+      "finished": 1,
+      "mean_speed_kmh": 41.5,
+      "mean_pressure": 0.09285714285714286,
+      "mean_progress": 0.7728671043891623,
+      "entropy": 0.6788559298275438,
+      "beta": 0.02
+    },
+    {
+      "episode": 183,
+      "return": 12.462923076026906,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16,
+      "mean_progress": 0.7175282050684604,
+      "entropy": 0.6621416928343528,
+      "beta": 0.02
+    },
+    {
+      "episode": 184,
+      "return": 12.201136867178391,
+      "finished": 1,
+      "mean_speed_kmh": 32.3,
+      "mean_pressure": 0.22777777777777775,
+      "mean_progress": 0.6017298259543551,
+      "entropy": 0.6536518697731166,
+      "beta": 0.02
+    },
+    {
+      "episode": 185,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6785952877204057,
+      "beta": 0.02
+    },
+    {
+      "episode": 186,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6448096891804875,
+      "beta": 0.02
+    },
+    {
+      "episode": 187,
+      "return": 12.430139461448272,
+      "finished": 1,
+      "mean_speed_kmh": 38.8,
+      "mean_pressure": 0.15333333333333332,
+      "mean_progress": 0.7213426307632181,
+      "entropy": 0.6613469012498179,
+      "beta": 0.02
+    },
+    {
+      "episode": 188,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.023
+    },
+    {
+      "episode": 189,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.026449999999999998
+    },
+    {
+      "episode": 190,
+      "return": 12.430139461448272,
+      "finished": 1,
+      "mean_speed_kmh": 38.8,
+      "mean_pressure": 0.15333333333333332,
+      "mean_progress": 0.7213426307632181,
+      "entropy": 0.6182722057980844,
+      "beta": 0.024333999999999998
+    },
+    {
+      "episode": 191,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.027984099999999994
+    },
+    {
+      "episode": 192,
+      "return": 12.201136867178391,
+      "finished": 1,
+      "mean_speed_kmh": 32.3,
+      "mean_pressure": 0.22777777777777775,
+      "mean_progress": 0.6017298259543551,
+      "entropy": 0.6475049911556837,
+      "beta": 0.025745371999999996
+    },
+    {
+      "episode": 193,
+      "return": 11.285845067742846,
+      "finished": 1,
+      "mean_speed_kmh": 30.5,
+      "mean_pressure": 0.34210526315789475,
+      "mean_progress": 0.5676760561969918,
+      "entropy": 0.6270063568757124,
+      "beta": 0.023685742239999998
+    },
+    {
+      "episode": 194,
+      "return": 11.862923076026906,
+      "finished": 1,
+      "mean_speed_kmh": 34.0,
+      "mean_pressure": 0.25882352941176473,
+      "mean_progress": 0.6331131221192299,
+      "entropy": 0.6468553244695899,
+      "beta": 0.021790882860799998
+    },
+    {
+      "episode": 195,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.025059515289919995
+    },
+    {
+      "episode": 196,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.02881844258340799
+    },
+    {
+      "episode": 197,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6768012301921147,
+      "beta": 0.026512967176735354
+    },
+    {
+      "episode": 198,
+      "return": 12.162923076026907,
+      "finished": 1,
+      "mean_speed_kmh": 36.1,
+      "mean_pressure": 0.2125,
+      "mean_progress": 0.6726826922516816,
+      "entropy": 0.5527358919114062,
+      "beta": 0.024391929802596527
+    },
+    {
+      "episode": 199,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.028050719272986004
+    },
+    {
+      "episode": 200,
+      "return": 12.541442265489733,
+      "finished": 1,
+      "mean_speed_kmh": 38.7,
+      "mean_pressure": 0.16000000000000003,
+      "mean_progress": 0.7207628176993156,
+      "entropy": 0.5796412138392179,
+      "beta": 0.025806661731147124
+    },
+    {
+      "episode": 201,
+      "return": 12.725696018242035,
+      "finished": 1,
+      "mean_speed_kmh": 41.6,
+      "mean_pressure": 0.10714285714285714,
+      "mean_progress": 0.774692572731574,
+      "entropy": 0.6759188510405734,
+      "beta": 0.023742128792655356
+    },
+    {
+      "episode": 202,
+      "return": 12.288871083360359,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.16249999999999998,
+      "mean_progress": 0.6730544427100225,
+      "entropy": 0.6565511599308376,
+      "beta": 0.021842758489242928
+    },
+    {
+      "episode": 203,
+      "return": 12.185845067742846,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.21875,
+      "mean_progress": 0.6741153167339278,
+      "entropy": 0.6626874017400102,
+      "beta": 0.020095337810103496
+    },
+    {
+      "episode": 204,
+      "return": 12.185845067742846,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.21875,
+      "mean_progress": 0.6741153167339278,
+      "entropy": 0.6624610282311064,
+      "beta": 0.02
+    },
+    {
+      "episode": 205,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.023
+    },
+    {
+      "episode": 206,
+      "return": 12.241442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 36.3,
+      "mean_pressure": 0.2125,
+      "mean_progress": 0.6757151415931084,
+      "entropy": 0.6620619735372356,
+      "beta": 0.02116
+    },
+    {
+      "episode": 207,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.024334
+    },
+    {
+      "episode": 208,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.027984099999999998
+    },
+    {
+      "episode": 209,
+      "return": 12.162923076026907,
+      "finished": 1,
+      "mean_speed_kmh": 36.1,
+      "mean_pressure": 0.2125,
+      "mean_progress": 0.6726826922516816,
+      "entropy": 0.5398449289079289,
+      "beta": 0.03218171499999999
+    },
+    {
+      "episode": 210,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.03700897224999999
+    },
+    {
+      "episode": 211,
+      "return": 12.485845067742845,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7190563378495229,
+      "entropy": 0.633110261208022,
+      "beta": 0.03404825446999999
+    },
+    {
+      "episode": 212,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.039155492640499986
+    },
+    {
+      "episode": 213,
+      "return": 12.730139461448273,
+      "finished": 1,
+      "mean_speed_kmh": 41.5,
+      "mean_pressure": 0.09285714285714286,
+      "mean_progress": 0.7728671043891623,
+      "entropy": 0.6322042931773131,
+      "beta": 0.03602305322925999
+    },
+    {
+      "episode": 214,
+      "return": 11.285845067742846,
+      "finished": 1,
+      "mean_speed_kmh": 30.5,
+      "mean_pressure": 0.34210526315789475,
+      "mean_progress": 0.5676760561969918,
+      "entropy": 0.6139578921928471,
+      "beta": 0.0331412089709192
+    },
+    {
+      "episode": 215,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.038112390316557075
+    },
+    {
+      "episode": 216,
+      "return": 12.462923076026906,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16,
+      "mean_progress": 0.7175282050684604,
+      "entropy": 0.5332823679632821,
+      "beta": 0.04382924886404063
+    },
+    {
+      "episode": 217,
+      "return": 12.501136867178392,
+      "finished": 1,
+      "mean_speed_kmh": 34.2,
+      "mean_pressure": 0.18235294117647058,
+      "mean_progress": 0.6371256980693172,
+      "entropy": 0.6001353274042723,
+      "beta": 0.040322908954917386
+    },
+    {
+      "episode": 218,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.04637134529815499
+    },
+    {
+      "episode": 219,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.053327047092878235
+    },
+    {
+      "episode": 220,
+      "return": 11.98887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 34.0,
+      "mean_pressure": 0.2117647058823529,
+      "mean_progress": 0.6334630049035506,
+      "entropy": 0.623070978505177,
+      "beta": 0.04906088332544798
+    },
+    {
+      "episode": 221,
+      "return": 12.201136867178391,
+      "finished": 1,
+      "mean_speed_kmh": 32.3,
+      "mean_pressure": 0.22777777777777775,
+      "mean_progress": 0.6017298259543551,
+      "entropy": 0.6131554251878037,
+      "beta": 0.045136012659412146
+    },
+    {
+      "episode": 222,
+      "return": 11.901136867178392,
+      "finished": 1,
+      "mean_speed_kmh": 30.6,
+      "mean_pressure": 0.26842105263157895,
+      "mean_progress": 0.5700598351146522,
+      "entropy": 0.6429473179878655,
+      "beta": 0.04152513164665918
+    },
+    {
+      "episode": 223,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.04775390139365805
+    },
+    {
+      "episode": 224,
+      "return": 11.862923076026906,
+      "finished": 1,
+      "mean_speed_kmh": 34.0,
+      "mean_pressure": 0.25882352941176473,
+      "mean_progress": 0.6331131221192299,
+      "entropy": 0.6074557818695935,
+      "beta": 0.04393358928216541
+    },
+    {
+      "episode": 225,
+      "return": 12.241442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 36.3,
+      "mean_pressure": 0.21250000000000002,
+      "mean_progress": 0.6757151415931084,
+      "entropy": 0.6432651035963729,
+      "beta": 0.04041890213959218
+    },
+    {
+      "episode": 226,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.046481737460531
+    },
+    {
+      "episode": 227,
+      "return": 12.130139461448271,
+      "finished": 1,
+      "mean_speed_kmh": 36.3,
+      "mean_pressure": 0.20625,
+      "mean_progress": 0.6762587163405169,
+      "entropy": 0.6214798147817095,
+      "beta": 0.04276319846368852
+    },
+    {
+      "episode": 228,
+      "return": 12.501136867178392,
+      "finished": 1,
+      "mean_speed_kmh": 34.2,
+      "mean_pressure": 0.18235294117647058,
+      "mean_progress": 0.6371256980693172,
+      "entropy": 0.6582367262441117,
+      "beta": 0.03934214258659344
+    },
+    {
+      "episode": 229,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.04524346397458245
+    },
+    {
+      "episode": 230,
+      "return": 11.885845067742846,
+      "finished": 1,
+      "mean_speed_kmh": 34.1,
+      "mean_pressure": 0.2647058823529412,
+      "mean_progress": 0.6344614745731085,
+      "entropy": 0.634119054434412,
+      "beta": 0.041623986856615856
+    },
+    {
+      "episode": 231,
+      "return": 12.425696018242034,
+      "finished": 1,
+      "mean_speed_kmh": 38.9,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7230464012161357,
+      "entropy": 0.5944947660814741,
+      "beta": 0.038294067908086586
+    },
+    {
+      "episode": 232,
+      "return": 11.862923076026906,
+      "finished": 1,
+      "mean_speed_kmh": 34.0,
+      "mean_pressure": 0.25882352941176473,
+      "mean_progress": 0.6331131221192299,
+      "entropy": 0.6337417722016041,
+      "beta": 0.03523054247543966
+    },
+    {
+      "episode": 233,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.04051512384675561
+    },
+    {
+      "episode": 234,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.04659239242376895
+    },
+    {
+      "episode": 235,
+      "return": 12.485845067742845,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7190563378495229,
+      "entropy": 0.6730475846059146,
+      "beta": 0.042865001029867435
+    },
+    {
+      "episode": 236,
+      "return": 12.730139461448273,
+      "finished": 1,
+      "mean_speed_kmh": 41.5,
+      "mean_pressure": 0.09285714285714286,
+      "mean_progress": 0.7728671043891623,
+      "entropy": 0.672974061833165,
+      "beta": 0.03943580094747804
+    },
+    {
+      "episode": 237,
+      "return": 11.98887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 34.0,
+      "mean_pressure": 0.2117647058823529,
+      "mean_progress": 0.6334630049035506,
+      "entropy": 0.6187651997137393,
+      "beta": 0.0362809368716798
+    },
+    {
+      "episode": 238,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.041723077402431766
+    },
+    {
+      "episode": 239,
+      "return": 11.388871083360359,
+      "finished": 1,
+      "mean_speed_kmh": 30.5,
+      "mean_pressure": 0.29473684210526313,
+      "mean_progress": 0.5667826885979137,
+      "entropy": 0.5469154507877895,
+      "beta": 0.047981539012796524
+    },
+    {
+      "episode": 240,
+      "return": 12.725696018242035,
+      "finished": 1,
+      "mean_speed_kmh": 41.6,
+      "mean_pressure": 0.10714285714285714,
+      "mean_progress": 0.774692572731574,
+      "entropy": 0.6250743334698438,
+      "beta": 0.0441430158917728
+    },
+    {
+      "episode": 241,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.05076446827553872
+    },
+    {
+      "episode": 242,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.05837913851686952
+    },
+    {
+      "episode": 243,
+      "return": 12.162923076026907,
+      "finished": 1,
+      "mean_speed_kmh": 36.1,
+      "mean_pressure": 0.2125,
+      "mean_progress": 0.6726826922516816,
+      "entropy": 0.593498711784404,
+      "beta": 0.053708807435519965
+    },
+    {
+      "episode": 244,
+      "return": 12.485845067742845,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7190563378495229,
+      "entropy": 0.5593752345689529,
+      "beta": 0.04941210284067837
+    },
+    {
+      "episode": 245,
+      "return": 11.941442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 34.2,
+      "mean_pressure": 0.2588235294117647,
+      "mean_progress": 0.6359671920876314,
+      "entropy": 0.621451139296917,
+      "beta": 0.0454591346134241
+    },
+    {
+      "episode": 246,
+      "return": 12.485845067742845,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7190563378495229,
+      "entropy": 0.6499041425343145,
+      "beta": 0.041822403844350174
+    },
+    {
+      "episode": 247,
+      "return": 12.462923076026906,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16,
+      "mean_progress": 0.7175282050684604,
+      "entropy": 0.5792720453564957,
+      "beta": 0.03847661153680216
+    },
+    {
+      "episode": 248,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.4864886880399567,
+      "beta": 0.04424810326732248
+    },
+    {
+      "episode": 249,
+      "return": 11.941442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 34.2,
+      "mean_pressure": 0.25882352941176473,
+      "mean_progress": 0.6359671920876314,
+      "entropy": 0.5760067023944493,
+      "beta": 0.04070825500593668
+    },
+    {
+      "episode": 250,
+      "return": 12.730139461448273,
+      "finished": 1,
+      "mean_speed_kmh": 41.5,
+      "mean_pressure": 0.09285714285714286,
+      "mean_progress": 0.7728671043891623,
+      "entropy": 0.6273882586057453,
+      "beta": 0.03745159460546175
+    },
+    {
+      "episode": 251,
+      "return": 12.241442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 36.3,
+      "mean_pressure": 0.2125,
+      "mean_progress": 0.6757151415931084,
+      "entropy": 0.642656433989356,
+      "beta": 0.03445546703702481
+    },
+    {
+      "episode": 252,
+      "return": 12.288871083360359,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.16249999999999998,
+      "mean_progress": 0.6730544427100225,
+      "entropy": 0.5943502084532388,
+      "beta": 0.03169902967406283
+    },
+    {
+      "episode": 253,
+      "return": 11.041442265489735,
+      "finished": 1,
+      "mean_speed_kmh": 29.0,
+      "mean_pressure": 0.37000000000000005,
+      "mean_progress": 0.5405721132744867,
+      "entropy": 0.5743427142291747,
+      "beta": 0.029163107300137804
+    },
+    {
+      "episode": 254,
+      "return": 12.288871083360359,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.16249999999999998,
+      "mean_progress": 0.6730544427100225,
+      "entropy": 0.6499415533260241,
+      "beta": 0.02683005871612678
+    },
+    {
+      "episode": 255,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.030854567523545793
+    },
+    {
+      "episode": 256,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.03548275265207766
+    },
+    {
+      "episode": 257,
+      "return": 12.730139461448273,
+      "finished": 1,
+      "mean_speed_kmh": 41.5,
+      "mean_pressure": 0.09285714285714286,
+      "mean_progress": 0.7728671043891623,
+      "entropy": 0.6730558565435858,
+      "beta": 0.032644132439911454
+    },
+    {
+      "episode": 258,
+      "return": 11.98887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 34.0,
+      "mean_pressure": 0.2117647058823529,
+      "mean_progress": 0.6334630049035506,
+      "entropy": 0.5547238153585371,
+      "beta": 0.030032601844718537
+    },
+    {
+      "episode": 259,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.034537492121426316
+    },
+    {
+      "episode": 260,
+      "return": 11.601136867178392,
+      "finished": 1,
+      "mean_speed_kmh": 29.1,
+      "mean_pressure": 0.305,
+      "mean_progress": 0.5415568433589195,
+      "entropy": 0.6106235497804121,
+      "beta": 0.031774492751712215
+    },
+    {
+      "episode": 261,
+      "return": 12.730139461448273,
+      "finished": 1,
+      "mean_speed_kmh": 41.5,
+      "mean_pressure": 0.09285714285714286,
+      "mean_progress": 0.7728671043891623,
+      "entropy": 0.6249723284851146,
+      "beta": 0.029232533331575238
+    },
+    {
+      "episode": 262,
+      "return": 12.241442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 36.3,
+      "mean_pressure": 0.2125,
+      "mean_progress": 0.6757151415931084,
+      "entropy": 0.6567800697147017,
+      "beta": 0.02689393066504922
+    },
+    {
+      "episode": 263,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6244429321012432,
+      "beta": 0.024742416211845284
+    },
+    {
+      "episode": 264,
+      "return": 12.241442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 36.3,
+      "mean_pressure": 0.21250000000000002,
+      "mean_progress": 0.6757151415931084,
+      "entropy": 0.6563842851407548,
+      "beta": 0.022763022914897662
+    },
+    {
+      "episode": 265,
+      "return": 12.725696018242035,
+      "finished": 1,
+      "mean_speed_kmh": 41.6,
+      "mean_pressure": 0.10714285714285714,
+      "mean_progress": 0.774692572731574,
+      "entropy": 0.6724536400063043,
+      "beta": 0.02094198108170585
+    },
+    {
+      "episode": 266,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6724080947650989,
+      "beta": 0.02
+    },
+    {
+      "episode": 267,
+      "return": 12.288871083360359,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.16249999999999998,
+      "mean_progress": 0.6730544427100225,
+      "entropy": 0.5881075788791268,
+      "beta": 0.02
+    },
+    {
+      "episode": 268,
+      "return": 12.725696018242035,
+      "finished": 1,
+      "mean_speed_kmh": 41.6,
+      "mean_pressure": 0.10714285714285714,
+      "mean_progress": 0.774692572731574,
+      "entropy": 0.4726034382199312,
+      "beta": 0.023
+    },
+    {
+      "episode": 269,
+      "return": 11.641442265489735,
+      "finished": 1,
+      "mean_speed_kmh": 32.3,
+      "mean_pressure": 0.3,
+      "mean_progress": 0.6006356814160964,
+      "entropy": 0.6284274613968461,
+      "beta": 0.02116
+    },
+    {
+      "episode": 270,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.024334
+    },
+    {
+      "episode": 271,
+      "return": 12.185845067742846,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.21875,
+      "mean_progress": 0.6741153167339278,
+      "entropy": 0.5655641871219271,
+      "beta": 0.022387280000000002
+    },
+    {
+      "episode": 272,
+      "return": 11.585845067742845,
+      "finished": 1,
+      "mean_speed_kmh": 32.2,
+      "mean_pressure": 0.3055555555555556,
+      "mean_progress": 0.5992136148746025,
+      "entropy": 0.5173871575337603,
+      "beta": 0.025745372000000002
+    },
+    {
+      "episode": 273,
+      "return": 12.162923076026907,
+      "finished": 1,
+      "mean_speed_kmh": 36.1,
+      "mean_pressure": 0.2125,
+      "mean_progress": 0.6726826922516816,
+      "entropy": 0.6549797848467894,
+      "beta": 0.02368574224
+    },
+    {
+      "episode": 274,
+      "return": 11.941442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 34.2,
+      "mean_pressure": 0.2588235294117647,
+      "mean_progress": 0.6359671920876314,
+      "entropy": 0.6462594427371622,
+      "beta": 0.0217908828608
+    },
+    {
+      "episode": 275,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.4665081490407853,
+      "beta": 0.02505951528992
+    },
+    {
+      "episode": 276,
+      "return": 11.941442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 34.2,
+      "mean_pressure": 0.2588235294117647,
+      "mean_progress": 0.6359671920876314,
+      "entropy": 0.5756162361625655,
+      "beta": 0.0230547540667264
+    },
+    {
+      "episode": 277,
+      "return": 12.541442265489733,
+      "finished": 1,
+      "mean_speed_kmh": 38.7,
+      "mean_pressure": 0.16000000000000003,
+      "mean_progress": 0.7207628176993156,
+      "entropy": 0.6451886353572328,
+      "beta": 0.02121037374138829
+    },
+    {
+      "episode": 278,
+      "return": 12.485845067742845,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7190563378495229,
+      "entropy": 0.6076044474513982,
+      "beta": 0.02
+    },
+    {
+      "episode": 279,
+      "return": 12.425696018242034,
+      "finished": 1,
+      "mean_speed_kmh": 38.9,
+      "mean_pressure": 0.16666666666666666,
+      "mean_progress": 0.7230464012161357,
+      "entropy": 0.5803074956912042,
+      "beta": 0.02
+    },
+    {
+      "episode": 280,
+      "return": 12.185845067742846,
+      "finished": 1,
+      "mean_speed_kmh": 36.2,
+      "mean_pressure": 0.21875,
+      "mean_progress": 0.6741153167339278,
+      "entropy": 0.6349710314538018,
+      "beta": 0.02
+    },
+    {
+      "episode": 281,
+      "return": 11.585845067742845,
+      "finished": 1,
+      "mean_speed_kmh": 32.2,
+      "mean_pressure": 0.3055555555555556,
+      "mean_progress": 0.5992136148746025,
+      "entropy": 0.5797854758329932,
+      "beta": 0.02
+    },
+    {
+      "episode": 282,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.023
+    },
+    {
+      "episode": 283,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.670270168789018,
+      "beta": 0.02116
+    },
+    {
+      "episode": 284,
+      "return": 12.201136867178391,
+      "finished": 1,
+      "mean_speed_kmh": 32.3,
+      "mean_pressure": 0.22777777777777775,
+      "mean_progress": 0.6017298259543551,
+      "entropy": 0.5377441610587188,
+      "beta": 0.024334
+    },
+    {
+      "episode": 285,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.027984099999999998
+    },
+    {
+      "episode": 286,
+      "return": 12.541442265489733,
+      "finished": 1,
+      "mean_speed_kmh": 38.7,
+      "mean_pressure": 0.16000000000000003,
+      "mean_progress": 0.7207628176993156,
+      "entropy": 0.5576086084737765,
+      "beta": 0.025745372
+    },
+    {
+      "episode": 287,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.029607177799999995
+    },
+    {
+      "episode": 288,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.03404825446999999
+    },
+    {
+      "episode": 289,
+      "return": 12.730139461448273,
+      "finished": 1,
+      "mean_speed_kmh": 41.5,
+      "mean_pressure": 0.09285714285714286,
+      "mean_progress": 0.7728671043891623,
+      "entropy": 0.6690192479571424,
+      "beta": 0.03132439411239999
+    },
+    {
+      "episode": 290,
+      "return": 12.241442265489734,
+      "finished": 1,
+      "mean_speed_kmh": 36.3,
+      "mean_pressure": 0.21250000000000002,
+      "mean_progress": 0.6757151415931084,
+      "entropy": 0.6298959454604801,
+      "beta": 0.02881844258340799
+    },
+    {
+      "episode": 291,
+      "return": 12.730139461448273,
+      "finished": 1,
+      "mean_speed_kmh": 41.5,
+      "mean_pressure": 0.09285714285714286,
+      "mean_progress": 0.7728671043891623,
+      "entropy": 0.6686964650739798,
+      "beta": 0.026512967176735354
+    },
+    {
+      "episode": 292,
+      "return": 12.462923076026906,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.16,
+      "mean_progress": 0.7175282050684604,
+      "entropy": 0.48263146830352077,
+      "beta": 0.030489912253245655
+    },
+    {
+      "episode": 293,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.0350633990912325
+    },
+    {
+      "episode": 294,
+      "return": 12.430139461448272,
+      "finished": 1,
+      "mean_speed_kmh": 38.8,
+      "mean_pressure": 0.15333333333333332,
+      "mean_progress": 0.7213426307632181,
+      "entropy": 0.5674491465753946,
+      "beta": 0.032258327163933904
+    },
+    {
+      "episode": 295,
+      "return": 12.725696018242035,
+      "finished": 1,
+      "mean_speed_kmh": 41.6,
+      "mean_pressure": 0.10714285714285714,
+      "mean_progress": 0.774692572731574,
+      "entropy": 0.608113866919315,
+      "beta": 0.029677660990819192
+    },
+    {
+      "episode": 296,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.034129310139442065
+    },
+    {
+      "episode": 297,
+      "return": 12.730139461448273,
+      "finished": 1,
+      "mean_speed_kmh": 41.5,
+      "mean_pressure": 0.09285714285714286,
+      "mean_progress": 0.7728671043891623,
+      "entropy": 0.6680047532642408,
+      "beta": 0.031398965328286704
+    },
+    {
+      "episode": 298,
+      "return": 12.58887108336036,
+      "finished": 1,
+      "mean_speed_kmh": 38.6,
+      "mean_pressure": 0.10666666666666666,
+      "mean_progress": 0.7179247388906906,
+      "entropy": 0.6679328756616982,
+      "beta": 0.02888704810202377
+    },
+    {
+      "episode": 299,
+      "return": 12.806756444948002,
+      "finished": 1,
+      "mean_speed_kmh": 44.7,
+      "mean_pressure": 0.04615384615384616,
+      "mean_progress": 0.8312889573036923,
+      "entropy": 0.0,
+      "beta": 0.03322010531732733
+    },
+    {
+      "episode": 300,
+      "return": 12.541442265489733,
+      "finished": 1,
+      "mean_speed_kmh": 38.7,
+      "mean_pressure": 0.16000000000000003,
+      "mean_progress": 0.7207628176993156,
+      "entropy": 0.5650866612755232,
+      "beta": 0.030562496891941147
+    }
+  ],
+  "eval_curve": [
+    {
+      "episode": 10,
+      "greedy_return": 1.0845652622790123,
+      "greedy_finished": 0.3333333333333333
+    },
+    {
+      "episode": 20,
+      "greedy_return": 12.73834970304655,
+      "greedy_finished": 1.0
+    },
+    {
+      "episode": 30,
+      "greedy_return": 1.0845652622790123,
+      "greedy_finished": 0.3333333333333333
+    },
+    {
+      "episode": 40,
+      "greedy_return": -4.776530329055483,
+      "greedy_finished": 0.0
+    },
+    {
+      "episode": 50,
+      "greedy_return": 6.91145748266278,
+      "greedy_finished": 0.6666666666666666
+    },
+    {
+      "episode": 60,
+      "greedy_return": 13.614286667254296,
+      "greedy_finished": 1.0
+    },
+    {
+      "episode": 70,
+      "greedy_return": 14.765650258481687,
+      "greedy_finished": 1.0
+    },
+    {
+      "episode": 80,
+      "greedy_return": 1.0845652622790123,
+      "greedy_finished": 0.3333333333333333
+    },
+    {
+      "episode": 90,
+      "greedy_return": 6.8772541117120545,
+      "greedy_finished": 0.6666666666666666
+    },
+    {
+      "episode": 100,
+      "greedy_return": 12.446445923313421,
+      "greedy_finished": 1.0
+    },
+    {
+      "episode": 110,
+      "greedy_return": 6.8772541117120545,
+      "greedy_finished": 0.6666666666666666
+    },
+    {
+      "episode": 120,
+      "greedy_return": 13.714180981956796,
+      "greedy_finished": 1.0
+    },
+    {
+      "episode": 130,
+      "greedy_return": 1.0845652622790123,
+      "greedy_finished": 0.3333333333333333
+    },
+    {
+      "episode": 140,
+      "greedy_return": 6.91145748266278,
+      "greedy_finished": 0.6666666666666666
+    },
+    {
+      "episode": 150,
+      "greedy_return": 13.73065813467028,
+      "greedy_finished": 1.0
+    },
+    {
+      "episode": 160,
+      "greedy_return": -4.776530329055483,
+      "greedy_finished": 0.0
+    },
+    {
+      "episode": 170,
+      "greedy_return": 14.882021725897673,
+      "greedy_finished": 1.0
+    },
+    {
+      "episode": 180,
+      "greedy_return": 7.388059256890489,
+      "greedy_finished": 0.3333333333333333
+    },
+    {
+      "episode": 190,
+      "greedy_return": 1.0845652622790123,
+      "greedy_finished": 0.3333333333333333
+    },
+    {
+      "episode": 200,
+      "greedy_return": 16.033385317125063,
+      "greedy_finished": 1.0
+    },
+    {
+      "episode": 210,
+      "greedy_return": 1.0503618913282857,
+      "greedy_finished": 0.3333333333333333
+    },
+    {
+      "episode": 220,
+      "greedy_return": 1.0503618913282857,
+      "greedy_finished": 0.3333333333333333
+    },
+    {
+      "episode": 230,
+      "greedy_return": 7.3532697579045525,
+      "greedy_finished": 0.3333333333333333
+    },
+    {
+      "episode": 240,
+      "greedy_return": 1.0503618913282857,
+      "greedy_finished": 0.3333333333333333
+    },
+    {
+      "episode": 250,
+      "greedy_return": -4.776530329055483,
+      "greedy_finished": 0.0
+    },
+    {
+      "episode": 260,
+      "greedy_return": 6.91145748266278,
+      "greedy_finished": 0.6666666666666666
+    },
+    {
+      "episode": 270,
+      "greedy_return": 14.998393193313655,
+      "greedy_finished": 1.0
+    },
+    {
+      "episode": 280,
+      "greedy_return": 13.73065813467028,
+      "greedy_finished": 1.0
+    },
+    {
+      "episode": 290,
+      "greedy_return": 12.772553073997274,
+      "greedy_finished": 1.0
+    },
+    {
+      "episode": 300,
+      "greedy_return": 1.0503618913282857,
+      "greedy_finished": 0.3333333333333333
+    }
+  ],
+  "eval": {
+    "trained": {
+      "return": 12.423377909514544,
+      "finished": 1.0,
+      "mean_speed_kmh": 38.44,
+      "peak_queue": 1.0,
+      "mean_pressure": 0.16,
+      "mean_progress": 0.7148918606343029
+    },
+    "fixed_time": {
+      "return": 10.623377909514545,
+      "finished": 1.0,
+      "mean_speed_kmh": 27.419999999999998,
+      "peak_queue": 1.0,
+      "mean_pressure": 0.4,
+      "mean_progress": 0.5106370433102164
+    },
+    "random": {
+      "return": 11.788785884037456,
+      "finished": 1.0,
+      "mean_speed_kmh": 33.18,
+      "peak_queue": 1.0,
+      "mean_pressure": 0.25699346405228757,
+      "mean_progress": 0.6175311467073967
+    }
+  }
+}
