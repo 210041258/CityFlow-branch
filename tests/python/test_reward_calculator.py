@@ -45,6 +45,22 @@ class TestRewardCalculatorInitialization:
         assert rc.max_queue_per_lane == 100
         assert rc.wait_penalty_horizon == 600
 
+    def test_components_constant_is_stable_order(self):
+        """COMPONENTS lists the four breakdown names in a fixed order."""
+        assert RewardCalculator.COMPONENTS == (
+            "queue_pressure",
+            "wait_penalty",
+            "throughput_gain",
+            "fairness_penalty",
+        )
+
+    def test_components_constant_matches_breakdown_keys(self):
+        """COMPONENTS exactly matches the keys returned by compute()."""
+        rc = RewardCalculator()
+        obs = {"vehicles_ns": 10, "vehicles_ew": 5, "queue_ratio": 0.5, "phase": 0}
+        result = rc.compute("i0", obs)
+        assert set(result["components"].keys()) == set(RewardCalculator.COMPONENTS)
+
 
 class TestRewardCalculatorComputeStructure:
     """Tests for compute() return structure and basic behavior."""
