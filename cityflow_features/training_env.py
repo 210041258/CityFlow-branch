@@ -60,6 +60,7 @@ class TrafficSimulator:
               'vehicles_ns': int,
               'vehicles_ew': int,
               'cleared_total': int,    # cumulative vehicles cleared since reset
+              'cleared_step': int,     # vehicles cleared during the last step
               'stopped': int,          # currently stopped vehicles on approaches
               'phase_index': int,      # the phase actually applied (may differ
                                        # from requested if min-green enforced)
@@ -88,10 +89,14 @@ class MockTrafficSimulator(TrafficSimulator):
         self.departure_rate = departure_rate
         self._rng = random.Random(seed)
 
+        # Precompute the Bernoulli trial count so step() doesn't recompute it
+        self._arrival_trials = max(1, int(arrival_rate * 30))
+
         # Per-intersection dynamic state
         self._v_ns = [0] * num_intersections
         self._v_ew = [0] * num_intersections
         self._cleared = [0] * num_intersections
+        self._cleared_step = [0] * num_intersections
         self._stopped = [0] * num_intersections
         self._phase = [0] * num_intersections
 
@@ -99,34 +104,36 @@ class MockTrafficSimulator(TrafficSimulator):
         self._v_ns = [self._rng.randint(0, 30) for _ in range(self.num_intersections)]
         self._v_ew = [self._rng.randint(0, 30) for _ in range(self.num_intersections)]
         self._cleared = [0] * self.num_intersections
+        self._cleared_step = [0] * self.num_intersections
         self._stopped = [0] * self.num_intersections
         self._phase = [0] * self.num_intersections
 
     def step(self, actions, dt=1.0):
+        prob = self.arrival_rate * dt
+        trials = self._arrival_trials
+        rng = self._rng
+        depart_cap = int(self.departure_rate * 30 * dt)
         for i in range(self.num_intersections):
             phase = int(actions[i]) % self.num_phases
             self._phase[i] = phase
+            self._cleared_step[i] = 0
 
-            # Arrivals (poisson-ish via binomial approximation for stability)
-            arrivals_ns = self._rng.binomial if hasattr(self._rng, 'binomial') \
-                else None
-            # Fallback: use simple bernoulli sum
-            new_ns = sum(1 for _ in range(int(self.arrival_rate * 30))
-                         if self._rng.random() < (self.arrival_rate * dt))
-            new_ew = sum(1 for _ in range(int(self.arrival_rate * 30))
-                         if self._rng.random() < (self.arrival_rate * dt))
+            # Arrivals (binomial approximation via Bernoulli trials)
+            new_ns = sum(1 for _ in range(trials) if rng.random() < prob)
+            new_ew = sum(1 for _ in range(trials) if rng.random() < prob)
 
             # Departures: only on the green approach
             ns_green = (phase % 2 == 0)
-            depart_cap = int(self.departure_rate * 30 * dt)
             if ns_green and self._v_ns[i] > 0:
                 departed = min(self._v_ns[i], depart_cap)
                 self._v_ns[i] -= departed
                 self._cleared[i] += departed
+                self._cleared_step[i] += departed
             elif (not ns_green) and self._v_ew[i] > 0:
                 departed = min(self._v_ew[i], depart_cap)
                 self._v_ew[i] -= departed
                 self._cleared[i] += departed
+                self._cleared_step[i] += departed
 
             # Apply arrivals
             self._v_ns[i] += new_ns
@@ -145,6 +152,7 @@ class MockTrafficSimulator(TrafficSimulator):
             'vehicles_ns': self._v_ns[i],
             'vehicles_ew': self._v_ew[i],
             'cleared_total': self._cleared[i],
+            'cleared_step': self._cleared_step[i],
             'stopped': self._stopped[i],
             'phase_index': self._phase[i],
         }
@@ -196,6 +204,12 @@ class TrafficSignalEnv:
         self._step_count = 0
         self._episode_phase_changes = 0
 
+        # Per-intersection cumulative activity (vehicles cleared), tracked at
+        # the env level and kept out of the reward math so throughput can be
+        # reported/logged without influencing the learned signal.
+        self._episode_cleared = [0] * num_intersections
+        self._episode_cleared_total = 0
+
         self._intersection_ids = [f'int_{i}' for i in range(num_intersections)]
 
     # ------------------------------------------------------------------ #
@@ -238,6 +252,8 @@ class TrafficSignalEnv:
         self._phase_hold_steps = [0] * self.num_intersections
         self._step_count = 0
         self._episode_phase_changes = 0
+        self._episode_cleared = [0] * self.num_intersections
+        self._episode_cleared_total = 0
 
         # Apply an initial no-op step so we have real observations to return
         self.simulator.step(self._current_phase, dt=self.sim_dt)
@@ -304,6 +320,11 @@ class TrafficSignalEnv:
                 vehicle_count_ew=state['vehicles_ew'],
             )
 
+            # Env-level activity bookkeeping (kept out of the reward math).
+            cleared_step = state.get('cleared_step', 0)
+            self._episode_cleared[i] += cleared_step
+            self._episode_cleared_total += cleared_step
+
             obs_i = self.signal_char.get_observation_space(iid)
             result = self.reward_calc.compute(
                 iid, obs_i,
@@ -316,6 +337,7 @@ class TrafficSignalEnv:
                 'reward': result['reward'],
                 'components': result['components'],
                 'cleared': state['cleared_total'],
+                'cleared_step': cleared_step,
                 'stopped': state['stopped'],
                 'phase': state['phase_index'],
             }
@@ -323,10 +345,22 @@ class TrafficSignalEnv:
         obs = self._build_observation()
         terminated = False  # episodes end by truncation (time limit), not failure
         truncated = self._step_count >= self.max_steps
+        activity = {
+            'total_cleared': self._episode_cleared_total,
+            'avg_cleared_per_step': (
+                self._episode_cleared_total / self._step_count
+                if self._step_count else 0.0
+            ),
+            'cleared_per_intersection': {
+                iid: self._episode_cleared[i]
+                for i, iid in enumerate(self._intersection_ids)
+            },
+        }
         info = {
             'step': self._step_count,
             'phase_changes': self._episode_phase_changes,
             'per_intersection': per_intersection_info,
+            'activity': activity,
             'signal_metrics': self.signal_char.get_metrics(),
             'reward_metrics': self.reward_calc.get_metrics(),
         }
@@ -338,6 +372,7 @@ class TrafficSignalEnv:
         rew_m = self.reward_calc.get_metrics()
         print(f"[step {self._step_count:>4}] "
               f"phase_changes={self._episode_phase_changes} "
+              f"cleared={self._episode_cleared_total} "
               f"avg_return={rew_m['reward_avg_episode_return']:.3f} "
               f"avg_queue={rew_m['reward_avg_queue_pressure']:.3f} "
               f"avg_throughput={rew_m['reward_avg_throughput_gain']:.3f} "
@@ -401,6 +436,9 @@ if __name__ == '__main__':
     print()
     print("--- Final reward metrics ---")
     print(info['reward_metrics'])
+    print()
+    print("--- Final activity metrics ---")
+    print(info['activity'])
     print()
     print("--- Final per-intersection snapshot (int_0) ---")
     print(info['per_intersection']['int_0'])

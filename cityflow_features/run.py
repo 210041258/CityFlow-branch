@@ -100,7 +100,8 @@ class CityFlowTrafficSimulator:
     intersection. Road orientation is inferred from road endpoints in the
     roadnet; if metadata is incomplete, the road is assigned to EW. Since the
     CityFlow API does not expose a universal per-intersection discharge count,
-    ``cleared_total`` is an explicitly approximate queue-reduction estimate.
+    ``cleared_total`` is an explicitly approximate queue-reduction estimate
+    built from the drop on the currently served (green) approach only.
     """
 
     def __init__(
@@ -135,7 +136,9 @@ class CityFlowTrafficSimulator:
         self._lane_groups = self._build_lane_groups()
         self._phase_cache = [0] * self.num_intersections
         self._cleared_estimate = [0] * self.num_intersections
-        self._previous_queue = [0] * self.num_intersections
+        self._cleared_step = [0] * self.num_intersections
+        self._previous_ns = [0] * self.num_intersections
+        self._previous_ew = [0] * self.num_intersections
         self._lane_cache: Optional[Tuple[Dict[str, int], Dict[str, int]]] = None
         self._engine = None
         self._interval = self._read_interval()
@@ -223,7 +226,9 @@ class CityFlowTrafficSimulator:
         self._create_engine()
         self._phase_cache = [0] * self.num_intersections
         self._cleared_estimate = [0] * self.num_intersections
-        self._previous_queue = [0] * self.num_intersections
+        self._cleared_step = [0] * self.num_intersections
+        self._previous_ns = [0] * self.num_intersections
+        self._previous_ew = [0] * self.num_intersections
 
     def step(self, actions: Iterable[int], dt: float = 1.0):
         phases = [int(action) for action in actions]
@@ -244,18 +249,19 @@ class CityFlowTrafficSimulator:
             self._engine.next_step()
             self._lane_cache = None
 
-        # Estimate discharge from reductions on the currently served approach.
-        # This is not a detector-grade throughput measurement.
+        # Estimate discharge from the drop on the currently served (green)
+        # approach. Arrivals on that approach mask some departures, so this is
+        # a lower-bound proxy, not a detector-grade throughput measurement.
         for index, phase in enumerate(phases):
             ns, ew, _ = self._read_intersection_counts(index)
-            current_queue = ns + ew
-            previous_queue = self._previous_queue[index]
-            if phase % 2 == 0:
-                reduction = max(0, self._previous_queue[index] - current_queue)
-            else:
-                reduction = max(0, self._previous_queue[index] - current_queue)
+            if phase % 2 == 0:      # NS green -> NS approach is discharging
+                reduction = max(0, self._previous_ns[index] - ns)
+            else:                    # EW green -> EW approach is discharging
+                reduction = max(0, self._previous_ew[index] - ew)
             self._cleared_estimate[index] += reduction
-            self._previous_queue[index] = current_queue
+            self._cleared_step[index] = reduction
+            self._previous_ns[index] = ns
+            self._previous_ew[index] = ew
 
     def get_intersection_state(self, intersection_id: str) -> Dict[str, int]:
         try:
@@ -267,6 +273,7 @@ class CityFlowTrafficSimulator:
             "vehicles_ns": ns,
             "vehicles_ew": ew,
             "cleared_total": self._cleared_estimate[index],
+            "cleared_step": self._cleared_step[index],
             "stopped": stopped,
             "phase_index": self._phase_cache[index],
         }
@@ -393,6 +400,7 @@ def _episode_summary(
 ) -> Dict[str, Any]:
     reward_metrics = info.get("reward_metrics", {})
     signal_metrics = info.get("signal_metrics", {})
+    activity = info.get("activity", {})
     return {
         "policy": policy,
         "episode": episode,
@@ -403,9 +411,12 @@ def _episode_summary(
         "avg_queue_pressure": reward_metrics.get("reward_avg_queue_pressure", 0.0),
         "avg_wait_penalty": reward_metrics.get("reward_avg_wait_penalty", 0.0),
         "avg_throughput_gain": reward_metrics.get("reward_avg_throughput_gain", 0.0),
+        "total_cleared": activity.get("total_cleared", 0),
+        "avg_cleared_per_step": activity.get("avg_cleared_per_step", 0.0),
         "tracked_intersections": signal_metrics.get("signal_intersections_tracked", 0),
         "reward_metrics": reward_metrics,
         "signal_metrics": signal_metrics,
+        "activity": activity,
     }
 
 
@@ -505,7 +516,7 @@ def save_results(results: List[Dict[str, Any]], output_path: str):
         columns = [
             "policy", "episode", "seed", "steps", "return", "phase_changes",
             "avg_queue_pressure", "avg_wait_penalty", "avg_throughput_gain",
-            "tracked_intersections",
+            "total_cleared", "avg_cleared_per_step", "tracked_intersections",
         ]
         with destination.open("w", newline="", encoding="utf-8") as handle:
             writer = csv.DictWriter(handle, fieldnames=columns)
