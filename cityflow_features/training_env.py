@@ -32,8 +32,12 @@ Design notes
 import random
 from collections import defaultdict
 
-from signal_characterization import SignalCharacterization
-from reward_calculator import RewardCalculator
+if __package__:
+    from .signal_characterization import SignalCharacterization
+    from .reward_calculator import RewardCalculator
+else:
+    from signal_characterization import SignalCharacterization
+    from reward_calculator import RewardCalculator
 
 
 # ---------------------------------------------------------------------- #
